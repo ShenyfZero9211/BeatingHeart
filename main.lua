@@ -123,11 +123,11 @@ function love.update(dt)
         local lowF, midF, hiF = Audio.getBands()
         local beatPulse = Audio.getBeatPulse()
         
-        -- 生态唤醒逻辑：提速至 2 秒完全唤醒
+        -- 生态唤醒逻辑：极致降速至 12-15 秒完全唤醒
         if lowF > 0.05 or midF > 0.05 then
-            sensoryGate = math.min(1.0, sensoryGate + dt * 0.5) 
+            sensoryGate = math.min(1.0, sensoryGate + dt * 0.08) 
         else
-            sensoryGate = math.max(0.1, sensoryGate - dt * 0.08) 
+            sensoryGate = math.max(0.1, sensoryGate - dt * 0.04) 
         end
         
         -- 应用唤醒系数
@@ -139,27 +139,35 @@ function love.update(dt)
         local rawEnergy = lowF -- 只有低频层驱动弹性缩放
         
         -- Bionic Logic: Accumulated Arousal (生理动量/热量累积)
-        -- 结合当前能量和节奏强度，计算“热量注入”
         local heatInput = (rawEnergy * 1.5 + beatPulse * 2.0) * dt
         if heatInput > 0.01 then
             targetArousal = math.min(1.0, targetArousal + heatInput * 1.2)
         else
-            -- 冷却期显著拉长，模拟生理疲劳后的慢慢恢复 (0.05 衰减)
             targetArousal = math.max(0.0, targetArousal - dt * 0.05)
         end
         
-        -- 情绪平滑逼近 (增加惯性，响应速度 1.5)
-        arousal = arousal + (targetArousal - arousal) * dt * 1.5
+        -- [Epic Awakening] 认知延迟缓冲区：情绪并不是瞬间爆开的
+        arousalBuffer = arousalBuffer or 0.0
+        if targetArousal > 0.1 then
+            arousalBuffer = math.min(1.0, arousalBuffer + dt * 0.1) -- 10s 缓冲区
+        else
+            arousalBuffer = math.max(0.0, arousalBuffer - dt * 0.05)
+        end
         
-        -- ASR 分层感官推进
+        -- 最终情绪结合缓冲区 (增加惯性，响应速度 1.5)
+        local finalTarget = targetArousal * arousalBuffer
+        arousal = arousal + (finalTarget - arousal) * dt * 1.5
+        
+        -- ASR 分层感官推进 (进一步调重惯性)
         arousalColor = arousalColor + (arousal - arousalColor) * dt * 5.0
         arousalSpeed = arousalSpeed + (arousal - arousalSpeed) * dt * 1.5
-        arousalScale = arousalScale + (arousal - arousalScale) * dt * 0.6
-        arousalMotion = arousalMotion + (arousal - arousalMotion) * dt * 0.2
+        arousalScale = arousalScale + (arousal - arousalScale) * dt * 0.4
+        arousalMotion = arousalMotion + (arousal - arousalMotion) * dt * 0.15
         
         -- 相位积分器: 彻底接管绝对时间，基于分层频率（arousalSpeed）驱动心跳频率
+        -- 极致平滑频率感 (0.2 逼近速度)，实现马拉松式的加速过程
         local targetPhaseSpeed = 2.5 + arousalSpeed * 9.5
-        phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 0.8
+        phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 0.2
         beatPhase = beatPhase + phaseSpeed * dt
         
         local targetScale = rawEnergy * 2.0 -- Target inflation

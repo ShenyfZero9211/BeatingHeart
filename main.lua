@@ -3,29 +3,34 @@ local SharedMem = require("src.sharedmem")
 
 local memConfig = nil
 local isSettingsMode = false
+local isMenuMode = false
 local draggingWindow = false
 local dragOffsetX, dragOffsetY = 0, 0
+local lastSetSize = 0
 
-local Audio, Heart, Tray -- Lazy load hooks
+-- Physics State for Heart organic animation
+local currentScale = 0
+local currentVelocity = 0
+
+local Audio, Heart, Tray
 
 function love.load(args)
     if args then
         for i, v in ipairs(args) do
             if v == "settings" then isSettingsMode = true end
+            if v == "menu" then isMenuMode = true end
         end
     end
     
     local isCreator = false
     memConfig, isCreator = SharedMem.init()
+    if memConfig then
+        memConfig.shouldExit = 0
+    end
     
-    if not memConfig then
-        memConfig = {
-            size=150, sensitivity=1.0, 
-            color_r=1, color_g=0.2, color_b=0.3, color_a=1, 
-            posX=100, posY=100
-        }
+    if not memConfig then memConfig = {size=150, sensitivity=1.0, color_r=1, color_g=0.2, color_b=0.3, color_a=1, posX=100, posY=100, shouldExit=0}
     else
-        if not isSettingsMode then
+        if not isSettingsMode and not isMenuMode then
             local localConfig = Config.load()
             memConfig.size = localConfig.size or 150
             memConfig.sensitivity = localConfig.sensitivity or 1.0
@@ -41,11 +46,19 @@ function love.load(args)
     if isSettingsMode then
         local GUI = require("src.gui")
         Tray = require("src.tray")
-        -- Initialize settings window internally so it can be hidden instead of destroyed
         Tray.init("Settings", nil, nil, true)
-        
+        Tray.hideFromTaskbar()
         GUI.init(memConfig)
         love.graphics.setBackgroundColor(0.12, 0.12, 0.14)
+        
+    elseif isMenuMode then
+        local Menu = require("src.traymenu")
+        Tray = require("src.tray")
+        Tray.init("BeatingHeartMenu", nil, nil, true)
+        Tray.hideFromTaskbar()
+        Tray.makeTransparent()
+        Menu.init(memConfig)
+        
     else
         Heart = require("src.heart")
         Audio = require("src.audio")
@@ -54,14 +67,8 @@ function love.load(args)
         love.graphics.setBackgroundColor(0, 0, 0, 0)
         Audio.init()
         
-        love.timer.sleep(0.01) -- Reduce startup sleep overhead
-        Tray.init("Beating Heart", function() 
-            -- Check if settings is already running but just hidden
-            if not Tray.showSpecificWindow("Settings") then
-                -- Bypass heavily blocking 'cmd.exe', invoke direct NT execution kernel
-                Tray.spawnProcess('love . settings')
-            end
-        end, function() 
+        love.timer.sleep(0.01)
+        Tray.init("Beating Heart", nil, function()
             love.event.quit()
         end)
         
@@ -75,14 +82,53 @@ function love.update(dt)
     if isSettingsMode then
         local GUI = require("src.gui")
         GUI.update(dt)
+        
+    elseif isMenuMode then
+        local Menu = require("src.traymenu")
+        Menu.update(dt)
+        
     else
+        if memConfig.shouldExit == 1 then
+            love.event.quit()
+            return
+        end
+        
         Audio.update()
+        
+        -- The Spring-Mass Simulation for organic heartbeats!
+        local rawEnergy = Audio.getEnergy() * memConfig.sensitivity
+        local targetScale = rawEnergy * 2.0 -- Target inflation
+        
+        local springK = 80.0 -- Hardness of the imaginary spring
+        local damping = 9.0  -- Organic tissue decay rate
+        
+        local force = (targetScale - currentScale) * springK - currentVelocity * damping
+        currentVelocity = currentVelocity + force * dt
+        currentScale = currentScale + currentVelocity * dt
+        
+        if currentScale < 0 then currentScale = 0 end
+        
         if draggingWindow then
             local mx, my = Tray.getCursorPos()
             local newX, newY = mx - dragOffsetX, my - dragOffsetY
             love.window.setPosition(newX, newY)
             memConfig.posX = newX
             memConfig.posY = newY
+        end
+        
+        -- Pixel-perfect Ghost Window Hit-Testing
+        local wx, wy = love.window.getPosition()
+        local mx, my = Tray.getCursorPos()
+        local localX, localY = mx - wx, my - wy
+        
+        -- Approximate radius constraint (the heart draws up to roughly 0.8 * size)
+        local dist2 = (localX - 225)^2 + (localY - 225)^2
+        local hitRadius = memConfig.size * 0.95
+        
+        if dist2 > hitRadius^2 and not draggingWindow then
+            Tray.setClickThrough(true)
+        else
+            Tray.setClickThrough(false)
         end
     end
 end
@@ -91,18 +137,26 @@ function love.draw()
     if isSettingsMode then
         local GUI = require("src.gui")
         GUI.draw()
+    elseif isMenuMode then
+        local Menu = require("src.traymenu")
+        Menu.draw()
     else
         love.graphics.clear(0, 0, 0, 0)
         local w, h = love.graphics.getDimensions()
-        local energy = Audio.getEnergy() * memConfig.sensitivity
-        Heart.draw(w/2, h/2, memConfig.size, {memConfig.color_r, memConfig.color_g, memConfig.color_b, memConfig.color_a}, energy)
+        
+        -- Aesthetic Color Infusion
+        -- Rapid pulse forces red and dark blood flush interpolation dynamically
+        local r = math.min(1, math.max(0, memConfig.color_r + currentScale * 0.4))
+        local g = math.min(1, math.max(0, memConfig.color_g - currentScale * 0.2))
+        local b = math.min(1, math.max(0, memConfig.color_b - currentScale * 0.2))
+
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale)
     end
 end
 
 function love.keypressed(key)
     if key == "escape" then
-        if isSettingsMode then
-            -- 仅隐藏自己，而非销毁进程，下次呼出会 0 延迟
+        if isSettingsMode or isMenuMode then
             Tray.hide()
         else
             Tray.hide()
@@ -114,6 +168,10 @@ function love.mousepressed(x, y, button, istouch, presses)
     if isSettingsMode then
         local GUI = require("src.gui")
         GUI.mousepressed(x, y, button)
+        return
+    elseif isMenuMode then
+        local Menu = require("src.traymenu")
+        Menu.mousepressed(x, y, button)
         return
     end
     
@@ -135,20 +193,17 @@ function love.mousereleased(x, y, button, istouch, presses)
 end
 
 function love.quit()
-    Config.save({
-        size = memConfig.size,
-        sensitivity = memConfig.sensitivity,
-        color = {memConfig.color_r, memConfig.color_g, memConfig.color_b, memConfig.color_a},
-        posX = memConfig.posX,
-        posY = memConfig.posY
-    })
-    
-    if isSettingsMode then
-        if Tray then Tray.cleanup() end
-    else
-        if Tray then Tray.cleanup() end
+    if not isSettingsMode and not isMenuMode then
+        Config.save({
+            size = memConfig.size,
+            sensitivity = memConfig.sensitivity,
+            color = {memConfig.color_r, memConfig.color_g, memConfig.color_b, memConfig.color_a},
+            posX = memConfig.posX,
+            posY = memConfig.posY
+        })
     end
     
+    if Tray then Tray.cleanup() end
     SharedMem.cleanup()
     return false
 end

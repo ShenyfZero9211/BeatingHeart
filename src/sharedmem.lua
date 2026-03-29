@@ -36,6 +36,7 @@ ffi.cdef[[
         double color_a;
         double posX;
         double posY;
+        double shouldExit;
     } SharedConfig;
 ]]
 

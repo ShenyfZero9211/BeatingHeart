@@ -1,8 +1,15 @@
 function love.conf(t)
     local isSettings = false
+    local isMenu = false
+    local menuX, menuY
     if arg then
         for i, v in ipairs(arg) do
             if v == "settings" then isSettings = true end
+            if v == "menu" then 
+                isMenu = true 
+                menuX = tonumber(arg[i+1])
+                menuY = tonumber(arg[i+2])
+            end
         end
     end
     
@@ -12,7 +19,22 @@ function love.conf(t)
         t.window.title = "Settings"
         t.window.borderless = false
         t.window.transparent = false
-        -- 极致精简模块加载以大幅削减拉起进程的世界
+        t.modules.audio = false
+        t.modules.physics = false
+        t.modules.joystick = false
+        t.modules.thread = false
+        t.modules.video = false
+        t.modules.touch = false
+    elseif isMenu then
+        t.window.width = 160
+        t.window.height = 100
+        t.window.title = "BeatingHeartMenu"
+        t.window.borderless = true
+        t.window.transparent = true
+        if menuX and menuY then
+            t.window.x = menuX - 80 
+            t.window.y = menuY - 100 
+        end
         t.modules.audio = false
         t.modules.physics = false
         t.modules.joystick = false

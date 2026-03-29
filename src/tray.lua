@@ -3,7 +3,6 @@ local Tray = {}
 
 ffi.cdef[[
     typedef void* HWND;
-    typedef void* HMENU;
     typedef void* HINSTANCE;
     typedef void* HICON;
     typedef unsigned int UINT;
@@ -14,6 +13,7 @@ ffi.cdef[[
     typedef long long LRESULT;
     typedef unsigned long long WPARAM;
     typedef long long LPARAM;
+    typedef void* HRGN;
     
     typedef struct {
         long x;
@@ -45,11 +45,6 @@ ffi.cdef[[
     int Shell_NotifyIconA(DWORD dwMessage, NOTIFYICONDATA* lpData);
     HICON LoadIconA(HINSTANCE hInstance, const char* lpIconName);
     
-    HMENU CreatePopupMenu();
-    int InsertMenuA(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, const char* lpNewItem);
-    int TrackPopupMenu(HMENU hMenu, UINT uFlags, int x, int y, int nReserved, HWND hWnd, const void* prcRect);
-    int DestroyMenu(HMENU hMenu);
-    
     int GetCursorPos(POINT* lpPoint);
     int SetForegroundWindow(HWND hWnd);
     int ShowWindow(HWND hWnd, int nCmdShow);
@@ -67,11 +62,15 @@ ffi.cdef[[
     
     int DwmExtendFrameIntoClientArea(HWND hWnd, const MARGINS* pMarInset);
     unsigned int WinExec(const char* lpCmdLine, unsigned int uCmdShow);
+    
+    HRGN CreateEllipticRgn(int x1, int y1, int x2, int y2);
+    int SetWindowRgn(HWND hWnd, HRGN hRgn, int bRedraw);
 ]]
 
 local shell32 = ffi.load("shell32")
 local user32 = ffi.load("user32")
 local kernel32 = ffi.load("kernel32")
+local gdi32 = ffi.load("gdi32")
 local dwmapi = nil
 pcall(function() dwmapi = ffi.load("dwmapi") end)
 
@@ -80,9 +79,6 @@ local NIF_ICON = 0x2
 local NIF_TIP = 0x4
 local WM_USER = 0x0400
 local TRAY_CALLBACK = WM_USER + 101
-
-local ID_SETTINGS = 1001
-local ID_EXIT = 1002
 
 local WM_LBUTTONUP = 0x0202
 local WM_RBUTTONUP = 0x0205
@@ -152,26 +148,32 @@ function Tray.hideFromTaskbar()
     user32.SetWindowLongPtrA(hwnd, GWL_EXSTYLE, ffi.cast("LONG_PTR", oldEx))
 end
 
+function Tray.setClickThrough(enable)
+    if not hwnd then return end
+    local GWL_EXSTYLE = -20
+    local WS_EX_TRANSPARENT = 0x00000020
+    local WS_EX_LAYERED = 0x00080000
+    
+    local oldEx = user32.GetWindowLongA(hwnd, GWL_EXSTYLE)
+    local newEx = oldEx
+    if enable then
+        newEx = bit.bor(oldEx, WS_EX_TRANSPARENT, WS_EX_LAYERED)
+    else
+        newEx = bit.band(oldEx, bit.bnot(WS_EX_TRANSPARENT))
+    end
+    
+    if oldEx ~= newEx then
+        user32.SetWindowLongPtrA(hwnd, GWL_EXSTYLE, ffi.cast("LONG_PTR", newEx))
+    end
+end
+
 function Tray.showMenu()
     if not hwnd then return end
-    local hMenu = user32.CreatePopupMenu()
-    user32.InsertMenuA(hMenu, 0xFFFFFFFF, 0x0, ID_SETTINGS, "Settings...")
-    user32.InsertMenuA(hMenu, 0xFFFFFFFF, 0x0, ID_EXIT, "Exit")
-
     local pt = ffi.new("POINT")
     user32.GetCursorPos(pt)
     
-    user32.SetForegroundWindow(hwnd)
-    
-    local choice = user32.TrackPopupMenu(hMenu, bit.bor(0x0100, 0x0080), pt.x, pt.y, 0, hwnd, nil)
-    user32.DestroyMenu(hMenu)
-
-    if choice == ID_SETTINGS then
-        Tray.restore()
-        if onSettingsCallback then onSettingsCallback() end
-    elseif choice == ID_EXIT then
-        if onExitCallback then onExitCallback() end
-    end
+    -- Spawn custom Love2D tray menu near the bottom right cursor
+    kernel32.WinExec(string.format('love . menu %d %d', pt.x, pt.y), 5)
 end
 
 function Tray.showSpecificWindow(title)

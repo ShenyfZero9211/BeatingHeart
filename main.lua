@@ -46,8 +46,16 @@ function love.load(args)
         end
     end
     
-    local isCreator = false
-    memConfig, isCreator = SharedMem.init()
+    local isFirstInstance = false
+    memConfig, isFirstInstance = SharedMem.init()
+    
+    -- [IRON PULSE] 互斥体单例保护：非第一实例直接自杀，不留痕迹
+    if not isFirstInstance and not isSettingsMode and not isMenuMode then
+        print("[SYSTEM] Mutex locked. Another instance is active. Fast Exit.")
+        love.event.quit()
+        return
+    end
+    
     if memConfig then
         memConfig.shouldExit = 0
     end
@@ -326,7 +334,12 @@ function love.mousereleased(x, y, button, istouch, presses)
 end
 
 function love.quit()
-    if not isSettingsMode and not isMenuMode then
+    -- 1. [CRITICAL] 只有当驱动加载成功后才尝试关闭
+    if Audio and Audio.stop then
+        Audio.stop()
+    end
+
+    if not isSettingsMode and not isMenuMode and memConfig then
         Config.save({
             size = memConfig.size,
             sensitivity = memConfig.sensitivity,
@@ -338,7 +351,9 @@ function love.quit()
         })
     end
     
-    if Tray then Tray.cleanup() end
-    SharedMem.cleanup()
+    if Tray and Tray.cleanup then Tray.cleanup() end
+    if SharedMem and SharedMem.cleanup then SharedMem.cleanup() end
+    
+    print("[SYSTEM] Fast exit path engaged.")
     return false
 end

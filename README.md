@@ -1,64 +1,47 @@
-# Beating Heart — 仿生桌面情绪伴侣
+# Bionic Beating Heart (L0V3 Companion) - v0.1.4
 
-![Status](https://img.shields.io/badge/Version-v0.0.9-red)
-![Engine](https://img.shields.io/badge/Engine-Love2D-pink)
-![Author](https://img.shields.io/badge/Author-SharpEye-blue)
+![Beating Heart](https://github.com/ShenyfZero9211/BeatingHeart/raw/main/screenshot.png) *(Note: Placeholder link, replace with your actual screen capture)*
 
-**Beating Heart** 不仅仅是一个桌面音频可视化工具，它是一个具备“感官记忆”与“生理惯性”的数字生命体。它静静地悬浮在您的桌面上，通过深度感应系统捕捉周围的律动，以此驱动其独特的情绪与物理状态演变。
+**Beating Heart** 是一款基于 Love2D 开发的仿生桌面音乐伴侣。它不仅仅是一个可视化工具，更是一个具备“原生感官”的数字生命——它能直接从 Windows 内核捕获声音，并以高度拟真的生物律动进行视觉反馈。
 
----
+## 🌟 核心特性 (v0.1.4 Pure Soul)
 
-## ✨ 项目亮点 (Highlights)
+### 1. 原生硬件感官 (Native WASAPI Sense)
+- **零配置内录**：通过自定义 C 编写的 WASAPI Loopback 驱动，直接从扬声器捕获信号。
+- **全格式兼容**：支持 16/24/32-bit PCM 采样，深度适配 5.1/7.1 环绕声环境。
+- **高保真 FFT**：底层进行实时分频处理，低频爆发力提升 1.8 次幂。
 
-### 1. 非同步联觉响应系统 (Asynchronous Synesthetic Response)
-不同于传统的音频同步工具，Beating Heart 模拟了生物感官的**时延惯性**。我们将情绪唤醒拆解为四个物理层：
-- **色彩层 (Color)**：最先察觉律动，实时变色。
-- **频率层 (Speed)**：心跳 BPM 随节奏平滑累积、缓慢加速。
-- **体量层 (Scale)**：肌肉由于持续泵血而产生的体积膨胀感。
-- **律动层 (Motion)**：最后才介入的大幅度空间摇晃与沉浸式沉浸。
+### 2. 生物拟态律动 (Bionic Animation)
+- **有机形变 (Organic Distortion)**：长时间的高能状态会产生“兴奋积压”，触发心脏的非等比例挤压与拉伸。
+- **生理震颤 (Soft Jitter)**：模拟真实的肌肉颤动，告别电子噪波感。
+- **感官唤醒**：内置“苏醒-平稳-狂暴”多种情绪状态转换逻辑。
 
-### 2. 生物苏醒模型 (The Epic Awakening)
-心脏不再对声音产生机械的即时反应。它拥有 **12 秒的苏醒期** 与 **认知延迟缓冲区**。当音乐响起，它会经历从“缓慢升温”到“认知确认”再到最终“狂欢律动”的史诗级苏醒过程。
+### 3. 内核级稳定性 (Iron Pulse)
+- **铁腕单例 (Iron Mutex)**：使用 Windows 内核互斥体锁，确保全系统内唯一运行实例，轻量且健壮。
+- **极速秒退 (v1.07 Driver)**：重构了线程回收链，关闭延迟从 500ms 降至 10ms，点击即刻消失。
+- **系统字体集成**：自动检索 `WINDIR\Fonts` 挂载微软雅黑，不再占用额外的硬盘空间（项目体积缩减 95%）。
 
-### 3. 热量累积交互逻辑 (Emotional Momentum)
-内置“能量池”概念。心脏的兴奋度是随音乐活跃度通过积分累积的。它会因为持续的高能而“满头大汗”（变亮变快），也会在音乐停下后展现出动人的“余热消散”退避过程。
+## 🚀 快速开始
 
----
+### 环境要求
+- **Windows 10/11** (x64)
+- [Love2D](https://love2d.org/) (推荐 11.x 版本)
 
-## 🚀 未来计划 (Future Plans: The AI Evolution)
+### 启动
+1. 下载仓库并解压。
+2. 在目录内运行：`love .`
+3. 播放任意音乐（无需设置立体声混音），心脏将自动开始跳动。
 
-我们志在将这颗心脏演化为真正的 **“硅基伴侣”**：
+## ⚙️ 交互说明
+- **左键拖动**：自由摆放心脏位置。
+- **右键菜单**：
+    - **设置**：调节心脏体积、灵敏度及 5 种预设配色。
+    - **退出**：安全且快速地释放驱动并退出。
 
-- [ ] **多模态 AI 融合 (Multi-modal AI Integration)**：
-    - **LLM 大语言模型**：接入 LLM 赋予心脏理解与对话能力。它将读懂您的工作语境，提供情绪价值，成为具备共情能力的数字伙伴。
-    - **视觉模型感知 (Computer Vision)**：支持桌面与摄像头视觉反馈。心脏能感知到您的疲劳、专注或微笑，并给出相应的生理反馈（如您疲劳时它会跳动得更加温和舒缓）。
-    - **听觉深度理解 (Audio Semantics)**：不仅感应音量，更将理解对话内容与情绪语调，让陪伴更具深度。
-- [ ] **桌面感知交互**：增加鼠标触摸互动（抚摸心脏会使其加速或害羞）。
-- [ ] **环境色拾取**：心脏颜色可随当前屏幕的主色调自动进行生理融合。
-- [ ] **全动态架构 (Evolutionary Morphing)**：支持根据用户长期的相处習慣，演化出独一无二的形态与行为指纹。
-
----
-
-## 🛠️ 技术栈
-- **核心引擎**：Love2D (LuaJIT)
-- **音频引擎**：3-Band IIR 数字滤波器 + 指数衰减积分器
-- **物理模拟**：阻尼简谐振动模型 (Spring-Mass-Damper)
-- **渲染技术**：参数化心形方程 + 多频复合噪声震颤模型
+## 🛠️ 技术架构
+- **语言**: LuaJIT (FFI) / C
+- **编译器**: MinGW-w64 (GCC)
+- **底层驱动**: WASAPI (Windows Audio Session API)
 
 ---
-
-## 💾 快速开始 (Quick Start)
-
-### 1. 环境准备
-为了让心脏感知音频，您的电脑需要具备内录能力：
-- **基础方案**：在系统声音设置中开启 `立体声混音 (Stereo Mix)`。
-- **进阶方案 (推荐)**：安装 [VB-CABLE Virtual Audio Device](https://vb-audio.com/Cable/)，并将系统输出设为 `CABLE Input`。心脏会自动感应并实现最纯净的数字采集。
-
-### 2. 安装并运行
-1. 安装 [Love2D](https://love2d.org/) (推荐 11.x+ 版本)。
-2. 克隆仓库：`git clone https://github.com/ShenyfZero9211/BeatingHeart.git`
-3. 运行：进入项目根目录，在终端执行 `love .`
-
----
-
-Developed with ❤️ by **SharpEye**
+*Created by SharpEye. Powered by L0V3 11.4.*

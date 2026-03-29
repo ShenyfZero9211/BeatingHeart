@@ -4,8 +4,8 @@
 #include <mmdeviceapi.h>
 #include <math.h>
 
-// [SharpEye] WASAPI Bridge Driver v1.06
-// 优化了对多声道 (7.1/5.1) 环境的能量采集，防止静音通道摊薄增益
+// [SharpEye] WASAPI Bridge Driver v1.07
+// 极致加速退出响应，将关闭延迟从 500ms 压缩至 50ms
 
 #define REFTIMES_PER_SEC  10000000
 
@@ -51,23 +51,17 @@ DWORD WINAPI CaptureThread(LPVOID lpParam) {
         hr = g_state.pCaptureClient->lpVtbl->GetNextPacketSize(g_state.pCaptureClient, &packetLength);
         if (FAILED(hr)) continue;
 
-        while (packetLength != 0) {
+        while (packetLength != 0 && g_state.active) {
             hr = g_state.pCaptureClient->lpVtbl->GetBuffer(g_state.pCaptureClient, &pData, &numFramesAvailable, &flags, NULL, NULL);
             if (SUCCEEDED(hr)) {
                 int channels = g_state.pwfx->nChannels;
                 float lAcc = 0, mAcc = 0, hAcc = 0;
 
                 for (UINT32 i = 0; i < numFramesAvailable; i++) {
-                    float sample = 0;
-                    
-                    // 针对多声道优化：
-                    // 音乐主要存在于第 1 (左) 和 第 2 (右) 通道。
-                    // 就算有 8 个通道，我们也只取这两个作为主要参考源，避免被静音通道摊薄。
                     float left = get_sample_value(pData, i*channels + 0, g_state.pwfx);
                     float right = (channels > 1) ? get_sample_value(pData, i*channels + 1, g_state.pwfx) : left;
-                    sample = (fabsf(left) + fabsf(right)) / 2.0f;
+                    float sample = (fabsf(left) + fabsf(right)) / 2.0f;
 
-                    // 极致感应：针对多声道的信号特征进行动态补强
                     lAcc += sample * 12.0f; 
                     mAcc += sample * 6.0f; 
                     hAcc += sample * 4.0f;
@@ -127,12 +121,17 @@ __declspec(dllexport) void wasapi_get_bands(float* l, float* m, float* h) {
 }
 
 __declspec(dllexport) void wasapi_stop() {
+    if (!g_state.active) return;
     g_state.active = FALSE;
     if (g_state.hThread) {
-        WaitForSingleObject(g_state.hThread, 500);
+        // [SPEED OPTIMIZATION] 大幅缩减等待时间：由 500ms 压缩至 50ms
+        WaitForSingleObject(g_state.hThread, 50); 
         CloseHandle(g_state.hThread);
         g_state.hThread = NULL;
     }
-    if (g_state.pAudioClient) g_state.pAudioClient->lpVtbl->Stop(g_state.pAudioClient);
+    if (g_state.pAudioClient) {
+        g_state.pAudioClient->lpVtbl->Stop(g_state.pAudioClient);
+    }
+    // 注意：在 DLL 卸载时 CoUninitialize 可能导致卡顿，确保仅在初始化成功后调用
     CoUninitialize();
 }

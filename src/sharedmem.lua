@@ -27,6 +27,10 @@ ffi.cdef[[
     BOOL CloseHandle(HANDLE hObject);
     DWORD GetLastError();
 
+    // Mutex for robust single-instance
+    HANDLE CreateMutexA(void* lpMutexAttributes, BOOL bInitialOwner, const char* lpName);
+    BOOL ReleaseMutex(HANDLE hMutex);
+
     typedef struct {
         double size;
         double sensitivity;
@@ -51,15 +55,21 @@ local FILE_MAP_ALL_ACCESS = 0xF001F
 
 local SharedMem = {}
 local hMapFile = nil
+local hMutex = nil
 local pBuf = nil
 local sharedConfig = nil
 
 function SharedMem.init()
+    -- 1. [SINGLE INSTANCE] 使用互斥体 (Mutex) 实现内核级单例保护
+    -- CreateMutexA 如果互斥体已存在，会返回句柄并设置 GetLastError = 183
+    hMutex = kernel32.CreateMutexA(nil, ffi.cast("BOOL", 0), "Local\\BeatingHeart_SingleInstance_Mutex")
+    local isFirstInstance = (kernel32.GetLastError() == 0)
+
     local size = ffi.sizeof("SharedConfig")
     
-    -- Request RAM buffer from Windows kernel securely
+    -- 2. 创建共享内存映射
     hMapFile = kernel32.CreateFileMappingA(
-        ffi.cast("HANDLE", ffi.cast("intptr_t", -1)), -- Maps against pagefile natively, no disk.
+        ffi.cast("HANDLE", ffi.cast("intptr_t", -1)), 
         nil,
         PAGE_READWRITE,
         0,
@@ -71,8 +81,6 @@ function SharedMem.init()
         return nil, false
     end
 
-    local isCreator = (kernel32.GetLastError() == 0)
-
     -- Map Pointer address
     pBuf = kernel32.MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, size)
 
@@ -82,7 +90,7 @@ function SharedMem.init()
     end
     
     sharedConfig = ffi.cast("SharedConfig*", pBuf)
-    return sharedConfig, isCreator
+    return sharedConfig, isFirstInstance
 end
 
 function SharedMem.get()
@@ -97,6 +105,10 @@ function SharedMem.cleanup()
     if hMapFile then
         kernel32.CloseHandle(hMapFile)
         hMapFile = nil
+    end
+    if hMutex then
+        kernel32.CloseHandle(hMutex)
+        hMutex = nil
     end
 end
 

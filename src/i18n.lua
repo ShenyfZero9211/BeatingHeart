@@ -15,9 +15,9 @@ local translations = {
         palette = "Palette:",
         lang_names = { [0] = "System Auto", [1] = "English", [2] = "简体中文" },
         -- Bubble Pools
-        pool_quiet = { "...", "Peaceful", "Deep breath", "Serene", "Zen", "Alone" },
-        pool_active = { "Rhythmic", "Grooving", "I feel you", "Lively", "Good vibes", "Steady" },
-        pool_intense = { "ROCK ON!", "ADRENALINE!", "HEART RACING!", "SO LOUD!", "YEAH!", "PUMPING!" }
+        pool_quiet = { "...", "Peaceful", "Deep breath", "Serene", "Zen", "Alone", "Watching you...", "So quiet." },
+        pool_active = { "Rhythmic", "Grooving", "I feel you", "Lively", "Good vibes", "Steady", "Nice beat", "Dance with me" },
+        pool_intense = { "ROCK ON!", "ADRENALINE!", "HEART RACING!", "SO LOUD!", "YEAH!", "PUMPING!", "I'M ALIVE!", "FEEL THE HEAT!" }
     },
     -- ID 2: Chinese (Simplified)
     [2] = {
@@ -33,9 +33,9 @@ local translations = {
         palette = "预设配色:",
         lang_names = { [0] = "系统默认", [1] = "English", [2] = "简体中文" },
         -- Bubble Pools
-        pool_quiet = { "...", "安宁", "深呼吸", "宁静", "入定", "心无旁骛" },
-        pool_active = { "律动中", "有节奏", "感觉到你了", "悦动", "这种感觉不错", "心率平稳" },
-        pool_intense = { "太炸了！", "燥起来！", "心跳加速！", "高能预警！", "全速跳动！", "热血沸腾！" }
+        pool_quiet = { "...", "安宁", "深呼吸", "宁静", "入定", "心无旁骛", "在看你呢...", "好安静..." },
+        pool_active = { "律动中", "有节奏", "感觉到你了", "悦动", "这种感觉不错", "心率平稳", "节奏感拉满", "一起跳吧" },
+        pool_intense = { "太炸了！", "燥起来！", "心跳加速！", "高能预警！", "全速跳动！", "热血沸腾！", "彻底疯狂！", "感受这热度！" }
     }
 }
 

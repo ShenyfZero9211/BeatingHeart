@@ -31,10 +31,17 @@ end
 function Bubble.spawn(arousal, memConfig)
     local langID = memConfig and memConfig.language or 0
     local poolKey = "pool_active"
-    if arousal < 0.3 then
-        poolKey = "pool_quiet"
-    elseif arousal > 0.7 then
-        poolKey = "pool_intense"
+    
+    -- [渐进式人格]：基于概率分布选择词库，消除硬截断
+    local rng = math.random()
+    if arousal < 0.4 then
+        -- 低能状态下，随 arousal 降低，安静词条概率增加
+        local quietProb = 0.8 - (arousal / 0.4) * 0.8
+        if rng < quietProb then poolKey = "pool_quiet" end
+    elseif arousal > 0.6 then
+        -- 高能状态下，随 arousal 升高，狂热词条概率增加
+        local intenseProb = (arousal - 0.6) / 0.4
+        if rng < intenseProb then poolKey = "pool_intense" end
     end
     
     local pool = i18n.getPool(poolKey, langID)

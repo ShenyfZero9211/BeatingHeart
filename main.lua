@@ -18,6 +18,7 @@ local currentVelocity = 0
 local arousal = 0.0
 local targetArousal = 0.0
 local beatPhase = 0.0
+local sensoryGate = 0.1 -- 感官唤醒门限 (0.1 ~ 1.0)
 
 local Audio, Heart, Tray, Bubble
 
@@ -113,33 +114,52 @@ function love.update(dt)
             return
         end
         
-        Audio.update()
+        Audio.update(dt)
         local lowF, midF, hiF = Audio.getBands()
-        lowF, midF, hiF = lowF * memConfig.sensitivity, midF * memConfig.sensitivity, hiF * memConfig.sensitivity
+        local beatPulse = Audio.getBeatPulse()
+        
+        -- 生态唤醒逻辑：提速至 2 秒完全唤醒
+        if lowF > 0.05 or midF > 0.05 then
+            sensoryGate = math.min(1.0, sensoryGate + dt * 0.5) 
+        else
+            sensoryGate = math.max(0.1, sensoryGate - dt * 0.08) 
+        end
+        
+        -- 应用唤醒系数
+        lowF = lowF * memConfig.sensitivity * sensoryGate
+        midF = midF * memConfig.sensitivity * sensoryGate
+        hiF = hiF * memConfig.sensitivity * sensoryGate
         
         -- The Spring-Mass Simulation for organic heartbeats!
         local rawEnergy = lowF -- 只有低频层驱动弹性缩放
         
-        -- Bionic Logic: Accumulate Arousal
-        -- 如果瞬间能量较高，激发心智；否则随着时间慢慢恢复平静
-        if rawEnergy > 0.4 then
-            targetArousal = math.min(1.0, targetArousal + dt * 1.5)
+        -- Bionic Logic: Accumulated Arousal (生理动量/热量累积)
+        -- 结合当前能量和节奏强度，计算“热量注入”
+        local heatInput = (rawEnergy * 1.5 + beatPulse * 2.0) * dt
+        if heatInput > 0.01 then
+            targetArousal = math.min(1.0, targetArousal + heatInput * 1.2)
         else
-            targetArousal = math.max(0.0, targetArousal - dt * 0.2)
+            -- 冷却期显著拉长，模拟生理疲劳后的慢慢恢复 (0.05 衰减)
+            targetArousal = math.max(0.0, targetArousal - dt * 0.05)
         end
-        -- 平滑逼近，使情绪过渡自然
-        arousal = arousal + (targetArousal - arousal) * dt * 2.0
+        
+        -- 情绪平滑逼近 (增加惯性，响应速度 1.5)
+        arousal = arousal + (targetArousal - arousal) * dt * 1.5
         
         -- 相位积分器: 彻底接管绝对时间，基于心智（arousal）驱动心跳频率
-        -- 极度平缓时(速度2.5，深呼吸)，极度活跃时(速度12.0，急促心跳)
-        local phaseSpeed = 2.5 + arousal * 9.5
+        -- 增加相位惯性，使频率切换时更加顺滑，而不是突然卡顿
+        local targetPhaseSpeed = 2.5 + arousal * 9.5
+        phaseSpeed = phaseSpeed or targetPhaseSpeed
+        phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 2.0
         beatPhase = beatPhase + phaseSpeed * dt
         
         local targetScale = rawEnergy * 2.0 -- Target inflation
         
-        -- 随情绪动态改变阻尼和刚度，实现类似肌肉紧绷的效果
-        local springK = 30.0 + arousal * 90.0  -- 平静时柔软(30)，兴奋时硬朗(120)
-        local damping = 12.0 - arousal * 7.0   -- 平静时阻尼大(12)，兴奋时阻尼小(5)
+        -- 随情绪动态改变阻尼和刚度
+        -- 舒缓模式 (arousal=0): 刚度极低(25)，模拟水母般的浮动
+        -- 节奏模式 (arousal=1): 刚度极高(160)，模拟强力泵血
+        local springK = 25.0 + arousal * 135.0  
+        local damping = 14.0 - arousal * 9.0   -- 舒缓时阻尼大(14)，兴奋时阻尼小(5)
         
         local force = (targetScale - currentScale) * springK - currentVelocity * damping
         currentVelocity = currentVelocity + force * dt
@@ -203,9 +223,12 @@ function love.draw()
         local b = math.min(1, math.max(0, baseB - currentScale * 0.2))
 
         local lowF, midF, hiF = Audio.getBands()
-        lowF, midF, hiF = lowF * memConfig.sensitivity, midF * memConfig.sensitivity, hiF * memConfig.sensitivity
+        local beatPulse = Audio.getBeatPulse()
+        lowF = lowF * memConfig.sensitivity * sensoryGate
+        midF = midF * memConfig.sensitivity * sensoryGate
+        hiF = hiF * memConfig.sensitivity * sensoryGate
         
-        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousal, beatPhase)
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousal, beatPhase, beatPulse)
         
         -- 渲染情感气泡
         Bubble.draw(w/2, h/2)

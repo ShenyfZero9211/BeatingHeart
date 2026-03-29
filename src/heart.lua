@@ -1,16 +1,19 @@
 local Heart = {}
 
-function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, beatPhase)
+function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, beatPhase, beatPulse)
     -- 处理默认参数兼容
     arousal = arousal or 0.0
-    beatPhase = beatPhase or (love.timer.getTime() * 5)
+    beatPhase = beatPhase or 0.0
     lowFactor = lowFactor or 0.0
     midFactor = midFactor or 0.0
     hiFactor = hiFactor or 0.0
+    beatPulse = beatPulse or 0.0
 
     -- 1. 低频 (Kick) 驱动核心缩放
     local beat = math.sin(beatPhase) * 0.1 + math.sin(beatPhase * 2) * 0.05
-    local rawScale = size * (1 + beat + lowFactor) * 0.05
+    -- [渐进式兴奋]：不再用阈值切换，而是用 arousal^2 产生平滑的非线性体积膨胀
+    local arousalFactor = arousal * arousal -- 平方曲线，初段平稳，末段爆发
+    local rawScale = size * (1 + beat + lowFactor * 0.5 + beatPulse * 0.4 + arousalFactor * 0.25) * 0.05
     
     local winW, winH = love.graphics.getDimensions()
     local safeRadius = math.min(winW, winH) / 2 * 0.92
@@ -25,32 +28,57 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     end
     
     love.graphics.push()
-    love.graphics.translate(x, y)
+    
+    -- 2. 氛围漂浮 (Ambient Float)
+    local t = love.timer.getTime()
+    local floatSpeed = 0.5 + arousalFactor * 0.5
+    local floatX = math.sin(t * 0.7 * floatSpeed) * (5 + lowFactor * 12 + arousalFactor * 20)
+    local floatY = math.cos(t * 0.5 * floatSpeed) * (5 + lowFactor * 12 + arousalFactor * 20)
+    love.graphics.translate(x + floatX, y + floatY)
     
     -- ===== 仿生神经视觉表现 (Bionic Behaviors) =====
     
-    -- 2. 高频 (Hat) 驱动整体震动 (Global Jitter) - 调低强度以增加克制感
+    -- 3. 生物混合震颤 (Bio-Tremor Model) 
+    -- [渐进渲染]：震颤感随 arousal 全程线性增长，无启动跳转感
+    local tremorIntensity = (arousal * 6) + (beatPulse * 12) + (hiFactor * 5)
     local jitterX, jitterY = 0, 0
-    if arousal > 0.6 or hiFactor > 0.4 then
-        local intensity = (arousal > 0.6 and (arousal-0.6)*6 or 0) + (hiFactor * 6)
-        jitterX = (math.random() - 0.5) * intensity
-        jitterY = (math.random() - 0.5) * intensity
+    if tremorIntensity > 0.05 then
+        local lowTremor = math.sin(t * 15) * 0.5
+        local midTremor = math.cos(t * 37 + lowTremor) * 0.3
+        local hiTremor = math.sin(t * 62) * 0.2
+        jitterX = (lowTremor + midTremor + hiTremor) * tremorIntensity
+        jitterY = (math.cos(t * 18) * 0.5 + math.sin(t * 41) * 0.3 + math.cos(t * 57) * 0.2) * tremorIntensity
         love.graphics.translate(jitterX, jitterY)
     end
 
-    -- 3. 中频 (Snare) 驱动摇头晃脑与瞬间偏转
-    local rotationAmt = (arousal > 0.4 and (arousal - 0.4) / 0.6 or 0)
-    local rotAngle = math.sin(beatPhase * 0.5) * (0.12 * rotationAmt)
-    -- 中频增加瞬间冲击旋转感 (调低倍率从 0.3 到 0.12)
-    rotAngle = rotAngle + (midFactor * 0.12 * (math.random() > 0.5 and 1 or -1))
+    -- 4. 旋转与瞬间偏转
+    -- 摆动幅度也随唤醒度平方倍增
+    local rotationBase = 0.12 * arousalFactor
+    local rotAngle = math.sin(beatPhase * 0.5) * rotationBase
+    if beatPulse > 0.1 then
+        rotAngle = rotAngle + math.sin(t * 25) * (beatPulse * 0.2)
+    end
+    -- [惯性摆动] 随能量平滑增强
+    rotAngle = rotAngle + math.sin(t * 2.5) * (arousalFactor * 0.12)
     love.graphics.rotate(rotAngle)
     
-    -- 4. 情绪驱动非等比例缩放
-    local scaleX = 1 + (arousal * 0.08) + (midFactor * 0.05)
-    local scaleY = 1 - (arousal * 0.03)
+    -- 5. 情绪驱动非等比例缩放
+    local scaleX = 1 + (arousal * 0.1) + (beatPulse * 0.08)
+    local scaleY = 1 - (arousal * 0.04)
     love.graphics.scale(scaleX, scaleY)
     
-    -- 收集被参数化方程计算出的心形多边形顶点
+    -- 6. 核心色彩处理 (Dynamic Color Layering)
+    local r, g, b, a = unpack(color)
+    -- 缓慢呼吸感
+    r = math.min(1, r + math.sin(t * 0.4) * 0.08)
+    
+    -- 节奏瞬闪 (Color Flash)：力度增强以提升节奏感
+    local flash = beatPulse * 0.6 + (arousal * 0.15)
+    r = math.min(1, r + flash)
+    g = math.min(1, g + flash * 0.6)
+    b = math.min(1, b + flash * 0.6)
+
+    -- 收集心形多边形顶点
     local points = {}
     for i = 0, math.pi * 2, 0.05 do
         local px = 16 * math.sin(i)^3
@@ -59,26 +87,20 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
         table.insert(points, py * scale)
     end
     
-    -- 使用多边形填充实心区域
-    -- 注意：由于在高能模式下存在 Shiver Noise 导致多边形可能自相交，
-    -- 我们使用 pcall 保护 triangulate，或直接使用更稳健的填充方式。
-    love.graphics.setColor(color)
+    -- 填充实心区域
+    love.graphics.setColor(r, g, b, a)
     if #points >= 6 then
         local success, triangles = pcall(love.math.triangulate, points)
         if success then
-            for _, tri in ipairs(triangles) do
-                love.graphics.polygon("fill", tri)
-            end
+            for _, tri in ipairs(triangles) do love.graphics.polygon("fill", tri) end
         else
-            -- 如果由于形状太复杂（自相交）导致无法三角化，则回退到直接填充
-            -- 这样虽然在极少数老旧硬件上可能有极小的渲染瑕疵，但能保证核心逻辑永不崩溃
             love.graphics.polygon("fill", points)
         end
     end
     
-    -- 绘制反光边缘与抗锯齿
-    love.graphics.setColor(1, 1, 1, 0.4)
-    love.graphics.setLineWidth(1.5)
+    -- 绘制高亮边缘
+    love.graphics.setColor(1, 1, 1, 0.3 + flash * 0.4)
+    love.graphics.setLineWidth(1.3 + flash)
     love.graphics.polygon("line", points)
     
     love.graphics.pop()

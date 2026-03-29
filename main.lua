@@ -20,6 +20,7 @@ local arousalColor = 0.0     -- 颜色响应 (极快: 5.0)
 local arousalSpeed = 0.0     -- 频率响应 (中速: 1.5)
 local arousalScale = 0.0     -- 体积响应 (慢速: 0.6)
 local arousalMotion = 0.0    -- 位移响应 (极慢: 0.2)
+local excitationMomentum = 0.0 -- [NEW] 兴奋动量：用于追踪长时间的高频激昂状态
 local targetArousal = 0.0
 local beatPhase = 0.0
 local phaseSpeed = 2.5
@@ -145,13 +146,13 @@ function love.update(dt)
         midF = midF * memConfig.sensitivity * sensoryGate
         hiF = hiF * memConfig.sensitivity * sensoryGate
         
-        -- [BEAT BOOSTER] 律动爆发力增强：采用 1.4 次幂非线性增益，调大体积膨胀系数
-        -- 这种非线性放大能让重鼓点（Dong-Ci）的瞬间冲击感极度明显
-        local rawEnergy = math.pow(lowF, 1.4) * 3.5 
+        -- [BEAT BOOSTER v2] 极致节奏爆发：采用 1.8 次幂非线性增益，调大基础膨胀倍率至 8.0
+        -- 这种设计能让轻音乐保持优雅，但在“动次打次”响起的瞬间，心脏会产生极具张力的收张感
+        local rawEnergy = math.pow(lowF, 1.8) * 8.0 
         
         -- Bionic Logic: Accumulated Arousal (生理热量累积)
-        -- 将节拍脉冲的权重也同步拉升
-        local heatInput = (rawEnergy * 1.5 + beatPulse * 3.0) * dt
+        -- 节拍冲击直接参与 Arousal 累积
+        local heatInput = (rawEnergy * 1.5 + beatPulse * 4.0) * dt
         if heatInput > 0.01 then
             targetArousal = math.min(1.0, targetArousal + heatInput * 1.5)
         else
@@ -187,8 +188,10 @@ function love.update(dt)
         -- 随情绪动态改变阻尼和刚度
         -- 舒缓模式 (arousal=0): 刚度极低(25)，模拟水母般的浮动
         -- 节奏模式 (arousal=1): 刚度极高(160)，模拟强力泵血
-        local springK = 25.0 + arousal * 135.0  
-        local damping = 14.0 - arousal * 9.0   -- 舒缓时阻尼大(14)，兴奋时阻尼小(5)
+        -- 随情绪动态改变阻尼和刚度 (物理回弹优化)
+        -- 在高能模式下极大地提升 K 值 (由 135 提升至 350+)，产生清脆回弹
+        local springK = 35.0 + arousal * 320.0  
+        local damping = 16.0 - arousal * 11.0   
         
         local force = (targetScale - currentScale) * springK - currentVelocity * damping
         currentVelocity = currentVelocity + force * dt
@@ -224,6 +227,13 @@ function love.update(dt)
             Tray.setClickThrough(true)
         else
             Tray.setClickThrough(false)
+        end
+        
+        -- [EXCITEMENT MOMENTUM] 生理动量累积：长时间处于高能状态的“有机记忆”
+        if arousal > 0.75 then
+            excitationMomentum = math.min(1.0, excitationMomentum + dt * 0.06) -- 约 16s 积满
+        else
+            excitationMomentum = math.max(0.0, excitationMomentum - dt * 0.12) -- 衰退速度较快 (约 8s)
         end
         
         Bubble.update(dt, arousal, memConfig)
@@ -263,7 +273,8 @@ function love.draw()
             scale = arousalScale,
             motion = arousalMotion
         }
-        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, beatPulse)
+        
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, beatPulse, excitationMomentum)
         
         -- 渲染情感气泡
         Bubble.draw(w/2, h/2)

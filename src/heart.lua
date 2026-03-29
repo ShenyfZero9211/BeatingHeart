@@ -1,6 +1,6 @@
 local Heart = {}
 
-function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, beatPhase, beatPulse)
+function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, beatPhase, beatPulse, excitationMomentum)
     -- 处理 ASR (Asynchronous Synesthetic Response) 结构
     local a_color = (type(arousal) == "table") and arousal.color or (arousal or 0)
     local a_speed = (type(arousal) == "table") and arousal.speed or (arousal or 0)
@@ -8,6 +8,7 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     local a_motion = (type(arousal) == "table") and arousal.motion or (arousal or 0)
 
     beatPhase = beatPhase or 0.0
+    excitationMomentum = excitationMomentum or 0.0
     lowFactor = lowFactor or 0.0
     midFactor = midFactor or 0.0
     hiFactor = hiFactor or 0.0
@@ -50,15 +51,16 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     
     -- ===== 仿生感知维度 (Bionic Sensing Layers) =====
     
-    -- 3. 生理震颤 (Tremor)
-    -- 只有心率上升到一个阶段后，战栗才显现
-    local tremorIntensity = (a_speed * 6) + (beatPulse * 12) + (hiFactor * 4)
+    -- 3. [SOOTHE JITTER] 生理震颤平滑化
+    -- 大幅削弱 hiFactor 的尖锐权重，增加时间低通滤镜感
+    local tremorIntensity = (a_speed * 4) + (beatPulse * 8) + (hiFactor * 1.5)
     if tremorIntensity > 0.05 then
-        local lowTremor = math.sin(t * 15) * 0.5
-        local midTremor = math.cos(t * 37 + lowTremor) * 0.3
-        local hiTremor = math.sin(t * 62) * 0.2
+        -- 降低频率：由 (15, 37, 62) 降低为更沉稳的 (8, 18, 12)
+        local lowTremor = math.sin(t * 8) * 0.4
+        local midTremor = math.cos(t * 18 + lowTremor) * 0.2
+        local hiTremor = math.sin(t * 12) * 0.1
         love.graphics.translate((lowTremor + midTremor + hiTremor) * tremorIntensity, 
-                                (math.cos(t * 18) * 0.5 + math.sin(t * 41) * 0.3) * tremorIntensity)
+                                (math.cos(t * 12) * 0.4 + math.sin(t * 22) * 0.2) * tremorIntensity)
     end
 
     -- 4. 旋转与重心偏转 (Inertia Sway)
@@ -70,8 +72,13 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     rotAngle = rotAngle + math.sin(t * 2.5) * (aMotionFactor * 0.2)
     love.graphics.rotate(rotAngle)
     
-    -- 5. 非等比例缩放 (Anisotropy)
-    love.graphics.scale(1 + (a_speed * 0.1) + (beatPulse * 0.08), 1 - (a_speed * 0.04))
+    -- 5. [ORGANIC DISTORTION] 非等比例有机形变
+    -- 正常状态下是等比。兴奋积压久了会产生纵向拉伸与横向挤压的呼吸感
+    local squash = excitationMomentum * 0.12 * math.sin(beatPhase)
+    local stretch = excitationMomentum * 0.15 * math.cos(beatPhase)
+    
+    love.graphics.scale(1 + (a_speed * 0.1) + (beatPulse * 0.12) + squash, 
+                        1 - (a_speed * 0.05) + stretch)
     
     -- 6. 色彩与光感渲染 (Color Response)
     local r, g, b, a = unpack(color)

@@ -38,10 +38,22 @@
     - **设置**：调节心脏体积、灵敏度及 5 种预设配色。
     - **退出**：安全且快速地释放驱动并退出。
 
-## 🛠️ 技术架构
-- **语言**: LuaJIT (FFI) / C
-- **编译器**: MinGW-w64 (GCC)
-- **底层驱动**: WASAPI (Windows Audio Session API)
+## 🛠️ 技术架构与编译 (Compilation)
+
+本程序的核心音频驱动采用原生 C 语言编写，以实现极致的低延迟采集。
+
+### 自行编译 C 驱动
+如果您修改了 `src/wasapi_bridge.c` 或需要为当前系统重新构建 DLL，请确保已安装 **MinGW-w64 (GCC)**。
+
+1. **环境准备**: 将 `gcc` 加入系统环境变量。
+2. **一键编译**: 直接运行根目录下的 `compile.bat`。
+   - 该脚本会自动链接 `ole32`, `mmdevapi`, `avrt`, `uuid` 等 Windows 多媒体内核库。
+3. **产物**: 编译成功后将在根目录生成 `wasapi_bridge.dll`。
+
+### 核心模块
+- **Lua 代码**: 逻辑控制、UI 渲染 (Love2D)。
+- **C 代码**: `src/wasapi_bridge.c` —— 底层 WASAPI Loopback 采集实现。
+- **FFI 桥梁**: `src/wasapi_ffi.lua` —— Lua 与 C 的高效数据交换层。
 
 ---
 *Created by SharpEye. Powered by L0V3 11.4.*

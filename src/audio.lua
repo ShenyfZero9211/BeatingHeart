@@ -5,11 +5,29 @@ local audioEnergy = 0
 function Audio.init()
     local devices = love.audio.getRecordingDevices()
     if #devices > 0 then
-        -- 尝试使用默认设备录制
-        recordingDevice = devices[1]
-        -- LÖVE Audio API: RecordingDevice:start(samplecount, samplerate, bitdepth, channels)
-        local success = recordingDevice:start(1024, 8000, 16, 1)
-        print("Audio recording device started:", success)
+        -- Smart Detection: 优先寻找虚拟音频线或立体声混音
+        for i, dev in ipairs(devices) do
+            local name = string.lower(dev:getName())
+            if string.find(name, "cable output") or string.find(name, "stereo mix") or string.find(name, "立体声混音") then
+                recordingDevice = dev
+                break
+            end
+        end
+        
+        -- Fallback: 默认麦克风
+        if not recordingDevice then
+            recordingDevice = devices[1]
+        end
+
+        local success, err = pcall(function()
+            recordingDevice:start(8192, 44100, 16, 1)
+        end)
+        
+        if success then
+            print("Audio recording started: " .. recordingDevice:getName())
+        else
+            print("Failed to start audio recording: ", err)
+        end
     else
         print("No recording devices found. Audio reactivity disabled.")
     end

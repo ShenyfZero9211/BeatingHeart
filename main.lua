@@ -14,6 +14,11 @@ local menuSpawned = false
 local currentScale = 0
 local currentVelocity = 0
 
+-- Bionic Brain Logic
+local arousal = 0.0
+local targetArousal = 0.0
+local beatPhase = 0.0
+
 local Audio, Heart, Tray
 
 function love.load(args)
@@ -107,10 +112,27 @@ function love.update(dt)
         
         -- The Spring-Mass Simulation for organic heartbeats!
         local rawEnergy = Audio.getEnergy() * memConfig.sensitivity
+        
+        -- Bionic Logic: Accumulate Arousal
+        -- 如果瞬间能量较高，激发心智；否则随着时间慢慢恢复平静
+        if rawEnergy > 0.4 then
+            targetArousal = math.min(1.0, targetArousal + dt * 1.5)
+        else
+            targetArousal = math.max(0.0, targetArousal - dt * 0.2)
+        end
+        -- 平滑逼近，使情绪过渡自然
+        arousal = arousal + (targetArousal - arousal) * dt * 2.0
+        
+        -- 相位积分器: 彻底接管绝对时间，基于心智（arousal）驱动心跳频率
+        -- 极度平缓时(速度2.5，深呼吸)，极度活跃时(速度12.0，急促心跳)
+        local phaseSpeed = 2.5 + arousal * 9.5
+        beatPhase = beatPhase + phaseSpeed * dt
+        
         local targetScale = rawEnergy * 2.0 -- Target inflation
         
-        local springK = 80.0 -- Hardness of the imaginary spring
-        local damping = 9.0  -- Organic tissue decay rate
+        -- 随情绪动态改变阻尼和刚度，实现类似肌肉紧绷的效果
+        local springK = 30.0 + arousal * 90.0  -- 平静时柔软(30)，兴奋时硬朗(120)
+        local damping = 12.0 - arousal * 7.0   -- 平静时阻尼大(12)，兴奋时阻尼小(5)
         
         local force = (targetScale - currentScale) * springK - currentVelocity * damping
         currentVelocity = currentVelocity + force * dt
@@ -162,12 +184,16 @@ function love.draw()
         local w, h = love.graphics.getDimensions()
         
         -- Aesthetic Color Infusion
-        -- Rapid pulse forces red and dark blood flush interpolation dynamically
-        local r = math.min(1, math.max(0, memConfig.color_r + currentScale * 0.4))
-        local g = math.min(1, math.max(0, memConfig.color_g - currentScale * 0.2))
-        local b = math.min(1, math.max(0, memConfig.color_b - currentScale * 0.2))
+        -- 情绪激动时发橘红光，平静时偏深紫色透光
+        local baseR = memConfig.color_r + (arousal * 0.2)
+        local baseG = memConfig.color_g - ((1.0 - arousal) * 0.1)
+        local baseB = memConfig.color_b + ((1.0 - arousal) * 0.15)
+        
+        local r = math.min(1, math.max(0, baseR + currentScale * 0.4))
+        local g = math.min(1, math.max(0, baseG - currentScale * 0.2))
+        local b = math.min(1, math.max(0, baseB - currentScale * 0.2))
 
-        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale)
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale, arousal, beatPhase)
     end
 end
 

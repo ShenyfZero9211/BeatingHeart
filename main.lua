@@ -14,10 +14,15 @@ local menuSpawned = false
 local currentScale = 0
 local currentVelocity = 0
 
--- Bionic Brain Logic
-local arousal = 0.0
+-- Bionic Brain Logic: Asynchronous Synesthetic Response (ASR)
+local arousal = 0.0          -- 核心情绪底色
+local arousalColor = 0.0     -- 颜色响应 (极快: 5.0)
+local arousalSpeed = 0.0     -- 频率响应 (中速: 1.5)
+local arousalScale = 0.0     -- 体积响应 (慢速: 0.6)
+local arousalMotion = 0.0    -- 位移响应 (极慢: 0.2)
 local targetArousal = 0.0
 local beatPhase = 0.0
+local phaseSpeed = 2.5
 local sensoryGate = 0.1 -- 感官唤醒门限 (0.1 ~ 1.0)
 
 local Audio, Heart, Tray, Bubble
@@ -146,11 +151,15 @@ function love.update(dt)
         -- 情绪平滑逼近 (增加惯性，响应速度 1.5)
         arousal = arousal + (targetArousal - arousal) * dt * 1.5
         
-        -- 相位积分器: 彻底接管绝对时间，基于心智（arousal）驱动心跳频率
-        -- 增加相位惯性，使频率切换时更加顺滑，而不是突然卡顿
-        local targetPhaseSpeed = 2.5 + arousal * 9.5
-        phaseSpeed = phaseSpeed or targetPhaseSpeed
-        phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 2.0
+        -- ASR 分层感官推进
+        arousalColor = arousalColor + (arousal - arousalColor) * dt * 5.0
+        arousalSpeed = arousalSpeed + (arousal - arousalSpeed) * dt * 1.5
+        arousalScale = arousalScale + (arousal - arousalScale) * dt * 0.6
+        arousalMotion = arousalMotion + (arousal - arousalMotion) * dt * 0.2
+        
+        -- 相位积分器: 彻底接管绝对时间，基于分层频率（arousalSpeed）驱动心跳频率
+        local targetPhaseSpeed = 2.5 + arousalSpeed * 9.5
+        phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 0.8
         beatPhase = beatPhase + phaseSpeed * dt
         
         local targetScale = rawEnergy * 2.0 -- Target inflation
@@ -212,11 +221,10 @@ function love.draw()
         love.graphics.clear(0, 0, 0, 0)
         local w, h = love.graphics.getDimensions()
         
-        -- Aesthetic Color Infusion
-        -- 情绪激动时发橘红光，平静时偏深紫色透光
-        local baseR = memConfig.color_r + (arousal * 0.2)
-        local baseG = memConfig.color_g - ((1.0 - arousal) * 0.1)
-        local baseB = memConfig.color_b + ((1.0 - arousal) * 0.15)
+        -- Aesthetic Color Infusion (基于 arousalColor 驱动)
+        local baseR = memConfig.color_r + (arousalColor * 0.2)
+        local baseG = memConfig.color_g - ((1.0 - arousalColor) * 0.1)
+        local baseB = memConfig.color_b + ((1.0 - arousalColor) * 0.15)
         
         local r = math.min(1, math.max(0, baseR + currentScale * 0.4))
         local g = math.min(1, math.max(0, baseG - currentScale * 0.2))
@@ -228,7 +236,14 @@ function love.draw()
         midF = midF * memConfig.sensitivity * sensoryGate
         hiF = hiF * memConfig.sensitivity * sensoryGate
         
-        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousal, beatPhase, beatPulse)
+        -- 传递 ASR 分层参数到渲染器
+        local arousalTable = {
+            color = arousalColor,
+            speed = arousalSpeed,
+            scale = arousalScale,
+            motion = arousalMotion
+        }
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, beatPulse)
         
         -- 渲染情感气泡
         Bubble.draw(w/2, h/2)

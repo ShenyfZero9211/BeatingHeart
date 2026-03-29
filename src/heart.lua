@@ -1,19 +1,23 @@
 local Heart = {}
 
 function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, beatPhase, beatPulse)
-    -- 处理默认参数兼容
-    arousal = arousal or 0.0
+    -- 处理 ASR (Asynchronous Synesthetic Response) 结构
+    local a_color = (type(arousal) == "table") and arousal.color or (arousal or 0)
+    local a_speed = (type(arousal) == "table") and arousal.speed or (arousal or 0)
+    local a_scale = (type(arousal) == "table") and arousal.scale or (arousal or 0)
+    local a_motion = (type(arousal) == "table") and arousal.motion or (arousal or 0)
+
     beatPhase = beatPhase or 0.0
     lowFactor = lowFactor or 0.0
     midFactor = midFactor or 0.0
     hiFactor = hiFactor or 0.0
     beatPulse = beatPulse or 0.0
 
-    -- 1. 低频 (Kick) 驱动核心缩放
+    -- 1. 心跳缩放 (Amplitude) - 受 arousalScale 驱动，具备高物理惯性
     local beat = math.sin(beatPhase) * 0.1 + math.sin(beatPhase * 2) * 0.05
-    -- [渐进式兴奋]：不再用阈值切换，而是用 arousal^2 产生平滑的非线性体积膨胀
-    local arousalFactor = arousal * arousal -- 平方曲线，初段平稳，末段爆发
-    local rawScale = size * (1 + beat + lowFactor * 0.5 + beatPulse * 0.4 + arousalFactor * 0.25) * 0.05
+    -- 采用平方曲线增加温和到狂热的非线性感
+    local aScaleFactor = a_scale * a_scale
+    local rawScale = size * (1 + beat + lowFactor * 0.5 + beatPulse * 0.4 + aScaleFactor * 0.25) * 0.05
     
     local winW, winH = love.graphics.getDimensions()
     local safeRadius = math.min(winW, winH) / 2 * 0.92
@@ -29,56 +33,51 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     
     love.graphics.push()
     
-    -- 2. 氛围漂浮 (Ambient Float)
+    -- 2. 空间律动 (Motion) - 受 arousalMotion 驱动，极长响应周期
     local t = love.timer.getTime()
-    local floatSpeed = 0.5 + arousalFactor * 0.5
-    local floatX = math.sin(t * 0.7 * floatSpeed) * (5 + lowFactor * 12 + arousalFactor * 20)
-    local floatY = math.cos(t * 0.5 * floatSpeed) * (5 + lowFactor * 12 + arousalFactor * 20)
+    local aMotionFactor = a_motion * a_motion
+    local floatSpeed = 0.5 + aMotionFactor * 0.5
+    local floatX = math.sin(t * 0.7 * floatSpeed) * (5 + lowFactor * 12 + aMotionFactor * 25)
+    local floatY = math.cos(t * 0.5 * floatSpeed) * (5 + lowFactor * 12 + aMotionFactor * 25)
     love.graphics.translate(x + floatX, y + floatY)
     
-    -- ===== 仿生神经视觉表现 (Bionic Behaviors) =====
+    -- ===== 仿生感知维度 (Bionic Sensing Layers) =====
     
-    -- 3. 生物混合震颤 (Bio-Tremor Model) 
-    -- [渐进渲染]：震颤感随 arousal 全程线性增长，无启动跳转感
-    local tremorIntensity = (arousal * 6) + (beatPulse * 12) + (hiFactor * 5)
-    local jitterX, jitterY = 0, 0
+    -- 3. 生理震颤 (Tremor) - 与心率 (a_speed) 同步建立
+    local tremorIntensity = (a_speed * 6) + (beatPulse * 12) + (hiFactor * 5)
     if tremorIntensity > 0.05 then
         local lowTremor = math.sin(t * 15) * 0.5
         local midTremor = math.cos(t * 37 + lowTremor) * 0.3
         local hiTremor = math.sin(t * 62) * 0.2
-        jitterX = (lowTremor + midTremor + hiTremor) * tremorIntensity
-        jitterY = (math.cos(t * 18) * 0.5 + math.sin(t * 41) * 0.3 + math.cos(t * 57) * 0.2) * tremorIntensity
-        love.graphics.translate(jitterX, jitterY)
+        love.graphics.translate((lowTremor + midTremor + hiTremor) * tremorIntensity, 
+                                (math.cos(t * 18) * 0.5 + math.sin(t * 41) * 0.3) * tremorIntensity)
     end
 
-    -- 4. 旋转与瞬间偏转
-    -- 摆动幅度也随唤醒度平方倍增
-    local rotationBase = 0.12 * arousalFactor
-    local rotAngle = math.sin(beatPhase * 0.5) * rotationBase
+    -- 4. 旋转与重心偏转 (Inertia Sway) - 受 Motion 惯性驱动
+    local rotAngle = math.sin(beatPhase * 0.5) * (0.12 * aMotionFactor)
     if beatPulse > 0.1 then
         rotAngle = rotAngle + math.sin(t * 25) * (beatPulse * 0.2)
     end
-    -- [惯性摆动] 随能量平滑增强
-    rotAngle = rotAngle + math.sin(t * 2.5) * (arousalFactor * 0.12)
+    -- 持续性重心漂移
+    rotAngle = rotAngle + math.sin(t * 2.5) * (aMotionFactor * 0.15)
     love.graphics.rotate(rotAngle)
     
-    -- 5. 情绪驱动非等比例缩放
-    local scaleX = 1 + (arousal * 0.1) + (beatPulse * 0.08)
-    local scaleY = 1 - (arousal * 0.04)
-    love.graphics.scale(scaleX, scaleY)
+    -- 5. 非等比例缩放 (Anisotropy)
+    love.graphics.scale(1 + (a_speed * 0.1) + (beatPulse * 0.08), 1 - (a_speed * 0.04))
     
-    -- 6. 核心色彩处理 (Dynamic Color Layering)
+    -- 6. 色彩与光感渲染 (Color Response) - 受 arousalColor 驱动
     local r, g, b, a = unpack(color)
-    -- 缓慢呼吸感
-    r = math.min(1, r + math.sin(t * 0.4) * 0.08)
+    -- 呼吸变色速度随频率 (a_speed) 动态调整
+    local colorCycleSpeed = 0.4 + a_speed * 1.5
+    r = math.min(1, r + math.sin(t * colorCycleSpeed) * (0.05 + a_color * 0.1))
     
-    -- 节奏瞬闪 (Color Flash)：力度增强以提升节奏感
-    local flash = beatPulse * 0.6 + (arousal * 0.15)
+    -- 节奏瞬闪 (Color Flash)
+    local flash = beatPulse * 0.6 + (a_color * 0.2)
     r = math.min(1, r + flash)
     g = math.min(1, g + flash * 0.6)
     b = math.min(1, b + flash * 0.6)
 
-    -- 收集心形多边形顶点
+    -- 渲染多边形
     local points = {}
     for i = 0, math.pi * 2, 0.05 do
         local px = 16 * math.sin(i)^3
@@ -87,7 +86,6 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
         table.insert(points, py * scale)
     end
     
-    -- 填充实心区域
     love.graphics.setColor(r, g, b, a)
     if #points >= 6 then
         local success, triangles = pcall(love.math.triangulate, points)
@@ -98,7 +96,7 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
         end
     end
     
-    -- 绘制高亮边缘
+    -- 绘制反光边缘
     love.graphics.setColor(1, 1, 1, 0.3 + flash * 0.4)
     love.graphics.setLineWidth(1.3 + flash)
     love.graphics.polygon("line", points)

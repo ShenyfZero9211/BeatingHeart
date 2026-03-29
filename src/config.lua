@@ -5,7 +5,8 @@ local default_config = {
     sensitivity = 1.0,
     color = {1, 0.2, 0.3, 1},
     posX = 100,
-    posY = 100
+    posY = 100,
+    language = 0 -- 0: Auto, 1: EN, 2: ZH
 }
 
 function Config.load()

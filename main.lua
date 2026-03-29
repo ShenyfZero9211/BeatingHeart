@@ -19,7 +19,7 @@ local arousal = 0.0
 local targetArousal = 0.0
 local beatPhase = 0.0
 
-local Audio, Heart, Tray
+local Audio, Heart, Tray, Bubble
 
 function love.load(args)
     if args then
@@ -36,8 +36,11 @@ function love.load(args)
     end
     
     if not memConfig then 
-        memConfig = {size=150, sensitivity=1.0, color_r=1, color_g=0.2, color_b=0.3, color_a=1, posX=100, posY=100, shouldExit=0, menuX=0, menuY=0, showMenu=0, isTopmost=1}
+        memConfig = {size=150, sensitivity=1.0, color_r=1, color_g=0.2, color_b=0.3, color_a=1, posX=100, posY=100, shouldExit=0, menuX=0, menuY=0, showMenu=0, isTopmost=1, language=0}
     else
+        local i18n = require("src.i18n")
+        i18n.init()
+        
         if not isSettingsMode and not isMenuMode then
             local localConfig = Config.load()
             memConfig.size = localConfig.size or 150
@@ -49,13 +52,14 @@ function love.load(args)
             memConfig.posX = localConfig.posX or 100
             memConfig.posY = localConfig.posY or 100
             memConfig.isTopmost = (localConfig.isTopmost == nil) and 1 or localConfig.isTopmost
+            memConfig.language = localConfig.language or 0
         end
     end
     
     if isSettingsMode then
         local GUI = require("src.gui")
         Tray = require("src.tray")
-        Tray.init("Settings", nil, nil, true)
+        Tray.init("Settings", nil, nil, true, memConfig)
         Tray.hideFromTaskbar()
         GUI.init(memConfig)
         love.graphics.setBackgroundColor(0.12, 0.12, 0.14)
@@ -72,6 +76,7 @@ function love.load(args)
         Heart = require("src.heart")
         Audio = require("src.audio")
         Tray = require("src.tray")
+        Bubble = require("src.bubble")
         
         love.graphics.setBackgroundColor(0, 0, 0, 0)
         Audio.init()
@@ -85,7 +90,7 @@ function love.load(args)
         end, function()
             memConfig.shouldExit = 1
             love.event.quit()
-        end)
+        end, false, memConfig)
         
         Tray.makeTransparent()
         Tray.hideFromTaskbar()
@@ -109,9 +114,11 @@ function love.update(dt)
         end
         
         Audio.update()
+        local lowF, midF, hiF = Audio.getBands()
+        lowF, midF, hiF = lowF * memConfig.sensitivity, midF * memConfig.sensitivity, hiF * memConfig.sensitivity
         
         -- The Spring-Mass Simulation for organic heartbeats!
-        local rawEnergy = Audio.getEnergy() * memConfig.sensitivity
+        local rawEnergy = lowF -- 只有低频层驱动弹性缩放
         
         -- Bionic Logic: Accumulate Arousal
         -- 如果瞬间能量较高，激发心智；否则随着时间慢慢恢复平静
@@ -169,6 +176,8 @@ function love.update(dt)
         else
             Tray.setClickThrough(false)
         end
+        
+        Bubble.update(dt, arousal, memConfig)
     end
 end
 
@@ -193,7 +202,13 @@ function love.draw()
         local g = math.min(1, math.max(0, baseG - currentScale * 0.2))
         local b = math.min(1, math.max(0, baseB - currentScale * 0.2))
 
-        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale, arousal, beatPhase)
+        local lowF, midF, hiF = Audio.getBands()
+        lowF, midF, hiF = lowF * memConfig.sensitivity, midF * memConfig.sensitivity, hiF * memConfig.sensitivity
+        
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousal, beatPhase)
+        
+        -- 渲染情感气泡
+        Bubble.draw(w/2, h/2)
     end
 end
 
@@ -249,7 +264,8 @@ function love.quit()
             color = {memConfig.color_r, memConfig.color_g, memConfig.color_b, memConfig.color_a},
             posX = memConfig.posX,
             posY = memConfig.posY,
-            isTopmost = memConfig.isTopmost
+            isTopmost = memConfig.isTopmost,
+            language = memConfig.language
         })
     end
     

@@ -3,9 +3,11 @@ local SharedMem = require("src.sharedmem")
 local Menu = {}
 local memConfig = nil
 
+local i18n = require("src.i18n")
+
 local buttons = {
-    { text = "Settings", y = 15, h = 30, action = "settings" },
-    { text = "Exit / Quit", y = 55, h = 30, action = "exit" }
+    { text_key = "tray_settings", y = 15, h = 30, action = "settings" },
+    { text_key = "tray_exit", y = 55, h = 30, action = "exit" }
 }
 
 local hovered = nil
@@ -73,8 +75,9 @@ function Menu.draw()
             love.graphics.rectangle("fill", 10, b.y, 140, b.h, 6)
         end
         
+        local langID = memConfig and memConfig.language or 0
         love.graphics.setColor(0.9, 0.9, 0.9, 1)
-        love.graphics.print(b.text, 25, b.y + 7)
+        love.graphics.print(i18n.get(b.text_key, langID), 25, b.y + 7)
     end
 end
 

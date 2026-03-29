@@ -1,25 +1,24 @@
 local Heart = {}
 
-function Heart.draw(x, y, size, color, audioFactor, arousal, beatPhase)
+function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, beatPhase)
     -- 处理默认参数兼容
     arousal = arousal or 0.0
     beatPhase = beatPhase or (love.timer.getTime() * 5)
+    lowFactor = lowFactor or 0.0
+    midFactor = midFactor or 0.0
+    hiFactor = hiFactor or 0.0
 
-    -- 双峰波形模拟心跳的物理感，由阶段性的积分相位无缝驱动
+    -- 1. 低频 (Kick) 驱动核心缩放
     local beat = math.sin(beatPhase) * 0.1 + math.sin(beatPhase * 2) * 0.05
-    -- 加入音频加权因子，能量越高缩放越大
-    local rawScale = size * (1 + beat + audioFactor) * 0.05
+    local rawScale = size * (1 + beat + lowFactor) * 0.05
     
-    -- 获取当前窗口尺寸，计算安全缩放上限
     local winW, winH = love.graphics.getDimensions()
-    local safeRadius = math.min(winW, winH) / 2 * 0.92 -- 留出一点边距
-    local maxScale = safeRadius / 17.0 -- 17 是心形方程的最大极径常数近似值
+    local safeRadius = math.min(winW, winH) / 2 * 0.92
+    local maxScale = safeRadius / 17.0
     
     local scale = rawScale
-    local threshold = maxScale * 0.75 -- 在达到 75% 时开始软限制
-    
+    local threshold = maxScale * 0.75
     if scale > threshold then
-        -- 完美的连续导数软限制（Soft Clipping）算法，避免达到极值时出现生硬的截断感
         local excess = scale - threshold
         local remaining = maxScale - threshold
         scale = threshold + remaining * (1 - math.exp(-excess / remaining))
@@ -29,42 +28,33 @@ function Heart.draw(x, y, size, color, audioFactor, arousal, beatPhase)
     love.graphics.translate(x, y)
     
     -- ===== 仿生神经视觉表现 (Bionic Behaviors) =====
-    -- 1. 摇头晃脑 (Rotation Wobble)
-    -- 当情绪处于开心/活跃阈值 (arousal > 0.4) 时，开始出现左右欢快的晃动
-    if arousal > 0.4 then
-        local rotationAmt = (arousal - 0.4) / 0.6
-        -- 半周期的打转，模仿跟随音乐左右摇摆
-        local rotAngle = math.sin(beatPhase * 0.5) * (0.25 * rotationAmt)
-        love.graphics.rotate(rotAngle)
+    
+    -- 2. 高频 (Hat) 驱动整体震动 (Global Jitter) - 调低强度以增加克制感
+    local jitterX, jitterY = 0, 0
+    if arousal > 0.6 or hiFactor > 0.4 then
+        local intensity = (arousal > 0.6 and (arousal-0.6)*6 or 0) + (hiFactor * 6)
+        jitterX = (math.random() - 0.5) * intensity
+        jitterY = (math.random() - 0.5) * intensity
+        love.graphics.translate(jitterX, jitterY)
     end
+
+    -- 3. 中频 (Snare) 驱动摇头晃脑与瞬间偏转
+    local rotationAmt = (arousal > 0.4 and (arousal - 0.4) / 0.6 or 0)
+    local rotAngle = math.sin(beatPhase * 0.5) * (0.12 * rotationAmt)
+    -- 中频增加瞬间冲击旋转感 (调低倍率从 0.3 到 0.12)
+    rotAngle = rotAngle + (midFactor * 0.12 * (math.random() > 0.5 and 1 or -1))
+    love.graphics.rotate(rotAngle)
+    
+    -- 4. 情绪驱动非等比例缩放
+    local scaleX = 1 + (arousal * 0.08) + (midFactor * 0.05)
+    local scaleY = 1 - (arousal * 0.03)
+    love.graphics.scale(scaleX, scaleY)
     
     -- 收集被参数化方程计算出的心形多边形顶点
     local points = {}
-    
-    -- 2. 激灵/颤抖神经 (Shiver Noise)
-    -- 如果非常激动或者受到了剧烈的重低音打击，边缘会发生细微颤栗
-    local shiverAmount = 0
-    if arousal > 0.7 then
-        shiverAmount = (arousal - 0.7) / 0.3 * 1.5
-    end
-    if audioFactor > 0.6 then -- audioFactor 即为物理系统的绝对膨胀倍数，代表瞬间能量打击
-        shiverAmount = shiverAmount + math.min(1.5, audioFactor * 0.5)
-    end
-    
     for i = 0, math.pi * 2, 0.05 do
-        -- 经典参数化心形方程
         local px = 16 * math.sin(i)^3
         local py = -(13 * math.cos(i) - 5 * math.cos(2*i) - 2 * math.cos(3*i) - math.cos(4*i))
-        
-        -- 施加非线性的神经颤抖扰动
-        if shiverAmount > 0 then
-            -- 利用三角函数的相位高频交错生成类似柏林噪声的伪随机扰动
-            local noiseX = math.sin(i * 12 + beatPhase * 20) * shiverAmount
-            local noiseY = math.cos(i * 15 - beatPhase * 25) * shiverAmount
-            px = px + noiseX
-            py = py + noiseY
-        end
-        
         table.insert(points, px * scale)
         table.insert(points, py * scale)
     end

@@ -113,10 +113,13 @@ local wndProcCallback = nil
 
 local onSettingsCallback = nil
 local onExitCallback = nil
+local memConfig = nil
+local i18n = require("src.i18n")
 
-function Tray.init(windowTitle, onSettings, onExit, noIcon)
+function Tray.init(windowTitle, onSettings, onExit, noIcon, config)
     onSettingsCallback = onSettings
     onExitCallback = onExit
+    memConfig = config
     
     hwnd = user32.FindWindowA(nil, windowTitle)
     if not hwnd then
@@ -152,9 +155,10 @@ function Tray.init(windowTitle, onSettings, onExit, noIcon)
                         return buf
                     end
                     
-                    user32.InsertMenuW(hMenu, 0, 0x00000000, 1001, utf8_to_utf16("设置面板 (Settings)"))
+                    local langID = memConfig and memConfig.language or 0
+                    user32.InsertMenuW(hMenu, 0, 0x00000000, 1001, utf8_to_utf16(i18n.get("tray_settings", langID)))
                     user32.InsertMenuW(hMenu, 1, 0x00000800, 0, nil) -- SEPARATOR
-                    user32.InsertMenuW(hMenu, 2, 0x00000000, 1002, utf8_to_utf16("彻底退出 (Exit)"))
+                    user32.InsertMenuW(hMenu, 2, 0x00000000, 1002, utf8_to_utf16(i18n.get("tray_exit", langID)))
                     
                     -- TPM_RETURNCMD=0x0100, TPM_RIGHTBUTTON=0x0002, TPM_BOTTOMALIGN=0x0020, TPM_NONOTIFY=0x0080
                     local cmd = user32.TrackPopupMenu(hMenu, 0x01A2, pt.x, pt.y, 0, hwnd, nil)

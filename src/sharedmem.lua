@@ -41,6 +41,7 @@ ffi.cdef[[
         double menuY;
         double showMenu;
         double isTopmost;
+        double language;
     } SharedConfig;
 ]]
 

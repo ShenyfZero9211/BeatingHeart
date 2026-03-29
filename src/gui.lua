@@ -200,7 +200,7 @@ function GUI.draw()
     
     -- E. 渲染页脚
     love.graphics.setColor(1, 1, 1, 0.4)
-    love.graphics.print("v0.0.9 by Antigravity", 20, panelHeight - 40)
+    love.graphics.print("v0.0.9 by SharpEye", 20, panelHeight - 40)
     love.graphics.setColor(0.6, 0.6, 0.6, 1)
     love.graphics.print(i18n.get("close_hint", langID), 20, panelHeight - 30)
 

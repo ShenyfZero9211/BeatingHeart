@@ -7,6 +7,8 @@ local isMenuMode = false
 local draggingWindow = false
 local dragOffsetX, dragOffsetY = 0, 0
 local lastSetSize = 0
+local lastTopmost = -1
+local menuSpawned = false
 
 -- Physics State for Heart organic animation
 local currentScale = 0
@@ -28,7 +30,8 @@ function love.load(args)
         memConfig.shouldExit = 0
     end
     
-    if not memConfig then memConfig = {size=150, sensitivity=1.0, color_r=1, color_g=0.2, color_b=0.3, color_a=1, posX=100, posY=100, shouldExit=0}
+    if not memConfig then 
+        memConfig = {size=150, sensitivity=1.0, color_r=1, color_g=0.2, color_b=0.3, color_a=1, posX=100, posY=100, shouldExit=0, menuX=0, menuY=0, showMenu=0, isTopmost=1}
     else
         if not isSettingsMode and not isMenuMode then
             local localConfig = Config.load()
@@ -40,6 +43,7 @@ function love.load(args)
             memConfig.color_a = localConfig.color and localConfig.color[4] or 1
             memConfig.posX = localConfig.posX or 100
             memConfig.posY = localConfig.posY or 100
+            memConfig.isTopmost = (localConfig.isTopmost == nil) and 1 or localConfig.isTopmost
         end
     end
     
@@ -68,7 +72,13 @@ function love.load(args)
         Audio.init()
         
         love.timer.sleep(0.01)
-        Tray.init("Beating Heart", nil, function()
+        Tray.init("Beating Heart", function()
+            -- Native Tray menu clicked "Settings" -> load standard Settings layout dialog
+            if not Tray.showSpecificWindow("Settings") then
+                Tray.spawnProcess('love . settings')
+            end
+        end, function()
+            memConfig.shouldExit = 1
             love.event.quit()
         end)
         
@@ -108,6 +118,12 @@ function love.update(dt)
         
         if currentScale < 0 then currentScale = 0 end
         
+        -- Apply Z-Order Topmost synchronization
+        if lastTopmost ~= memConfig.isTopmost then
+            Tray.setTopmost(memConfig.isTopmost == 1)
+            lastTopmost = memConfig.isTopmost
+        end
+        
         if draggingWindow then
             local mx, my = Tray.getCursorPos()
             local newX, newY = mx - dragOffsetX, my - dragOffsetY
@@ -122,7 +138,8 @@ function love.update(dt)
         local localX, localY = mx - wx, my - wy
         
         -- Approximate radius constraint (the heart draws up to roughly 0.8 * size)
-        local dist2 = (localX - 225)^2 + (localY - 225)^2
+        local winW, winH = love.graphics.getDimensions()
+        local dist2 = (localX - winW/2)^2 + (localY - winH/2)^2
         local hitRadius = memConfig.size * 0.95
         
         if dist2 > hitRadius^2 and not draggingWindow then
@@ -176,13 +193,19 @@ function love.mousepressed(x, y, button, istouch, presses)
     end
     
     if button == 1 then
+        memConfig.showMenu = -1 -- Explicitly banish customized tray menu upon main window interaction
         draggingWindow = true
         local wx, wy = love.window.getPosition()
         local mx, my = Tray.getCursorPos()
         dragOffsetX = mx - wx
         dragOffsetY = my - wy
-    elseif button == 2 then
-        Tray.showMenu()
+    end
+end
+
+function love.focus(f)
+    if isMenuMode then
+        local Menu = require("src.traymenu")
+        if Menu.focus then Menu.focus(f) end
     end
 end
 
@@ -199,7 +222,8 @@ function love.quit()
             sensitivity = memConfig.sensitivity,
             color = {memConfig.color_r, memConfig.color_g, memConfig.color_b, memConfig.color_a},
             posX = memConfig.posX,
-            posY = memConfig.posY
+            posY = memConfig.posY,
+            isTopmost = memConfig.isTopmost
         })
     end
     

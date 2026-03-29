@@ -6,7 +6,22 @@ function Heart.draw(x, y, size, color, audioFactor)
     -- 双峰波形模拟心跳的物理感
     local beat = math.sin(time * 5) * 0.1 + math.sin(time * 10) * 0.05
     -- 加入音频加权因子，能量越高缩放越大
-    local scale = size * (1 + beat + audioFactor) * 0.05
+    local rawScale = size * (1 + beat + audioFactor) * 0.05
+    
+    -- 获取当前窗口尺寸，计算安全缩放上限
+    local winW, winH = love.graphics.getDimensions()
+    local safeRadius = math.min(winW, winH) / 2 * 0.92 -- 留出一点边距
+    local maxScale = safeRadius / 17.0 -- 17 是心形方程的最大极径常数近似值
+    
+    local scale = rawScale
+    local threshold = maxScale * 0.75 -- 在达到 75% 时开始软限制
+    
+    if scale > threshold then
+        -- 完美的连续导数软限制（Soft Clipping）算法，避免达到极值时出现生硬的截断感
+        local excess = scale - threshold
+        local remaining = maxScale - threshold
+        scale = threshold + remaining * (1 - math.exp(-excess / remaining))
+    end
     
     love.graphics.push()
     love.graphics.translate(x, y)

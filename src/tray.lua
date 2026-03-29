@@ -41,9 +41,31 @@ ffi.cdef[[
 
     typedef LRESULT (__stdcall *WNDPROC)(HWND, UINT, WPARAM, LPARAM);
 
+    typedef void* HMENU;
+    typedef struct {
+        long left;
+        long top;
+        long right;
+        long bottom;
+    } RECT;
+    
+    HMENU CreatePopupMenu();
+    int DestroyMenu(HMENU hMenu);
+    int TrackPopupMenu(HMENU hMenu, UINT uFlags, int x, int y, int nReserved, HWND hWnd, const RECT *prcRect);
+    int PostMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+    
+    int MultiByteToWideChar(UINT CodePage, DWORD dwFlags, const char* lpMultiByteStr, int cbMultiByte, wchar_t* lpWideCharStr, int cchWideChar);
+    int InsertMenuW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, const wchar_t* lpNewItem);
+
+    typedef void* HMODULE;
+    typedef void* FARPROC;
+    HMODULE LoadLibraryA(const char* lpLibFileName);
+    FARPROC GetProcAddress(HMODULE hModule, const char* lpProcName);
+
     HWND FindWindowA(const char* lpClassName, const char* lpWindowName);
     int Shell_NotifyIconA(DWORD dwMessage, NOTIFYICONDATA* lpData);
     HICON LoadIconA(HINSTANCE hInstance, const char* lpIconName);
+    int SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags);
     
     int GetCursorPos(POINT* lpPoint);
     int SetForegroundWindow(HWND hWnd);
@@ -117,7 +139,33 @@ function Tray.init(windowTitle, onSettings, onExit, noIcon)
             if msg == TRAY_CALLBACK then
                 local mouseMsg = tonumber(l)
                 if mouseMsg == WM_RBUTTONUP then
-                    Tray.showMenu()
+                    local pt = ffi.new("POINT")
+                    user32.GetCursorPos(pt)
+                    
+                    user32.SetForegroundWindow(hwnd)
+                    local hMenu = user32.CreatePopupMenu()
+                    
+                    local function utf8_to_utf16(str)
+                        local len = kernel32.MultiByteToWideChar(65001, 0, str, -1, nil, 0)
+                        local buf = ffi.new("wchar_t[?]", len)
+                        kernel32.MultiByteToWideChar(65001, 0, str, -1, buf, len)
+                        return buf
+                    end
+                    
+                    user32.InsertMenuW(hMenu, 0, 0x00000000, 1001, utf8_to_utf16("设置面板 (Settings)"))
+                    user32.InsertMenuW(hMenu, 1, 0x00000800, 0, nil) -- SEPARATOR
+                    user32.InsertMenuW(hMenu, 2, 0x00000000, 1002, utf8_to_utf16("彻底退出 (Exit)"))
+                    
+                    -- TPM_RETURNCMD=0x0100, TPM_RIGHTBUTTON=0x0002, TPM_BOTTOMALIGN=0x0020, TPM_NONOTIFY=0x0080
+                    local cmd = user32.TrackPopupMenu(hMenu, 0x01A2, pt.x, pt.y, 0, hwnd, nil)
+                    user32.PostMessageA(hwnd, 0, 0, 0)
+                    user32.DestroyMenu(hMenu)
+                    
+                    if cmd == 1001 and onSettingsCallback then
+                        onSettingsCallback()
+                    elseif cmd == 1002 and onExitCallback then
+                        onExitCallback()
+                    end
                 elseif mouseMsg == WM_LBUTTONUP then
                     Tray.restore()
                 end
@@ -126,8 +174,34 @@ function Tray.init(windowTitle, onSettings, onExit, noIcon)
             return user32.CallWindowProcA(oldWndProc, h, msg, w, l)
         end)
         
+        
         oldWndProc = ffi.cast("WNDPROC", user32.SetWindowLongPtrA(hwnd, GWLP_WNDPROC, ffi.cast("LONG_PTR", wndProcCallback)))
     end
+
+    -- Hook into modern Windows immersive Dark Mode for standard components (Popup Menus)
+    -- This relies on uxtheme.dll ordinals (135 = SetPreferredAppMode)
+    pcall(function()
+        local hTheme = kernel32.LoadLibraryA("uxtheme.dll")
+        if hTheme ~= nil then
+            -- Ordinal 135: SetPreferredAppMode (1 = AllowDark => dynamically adapt to user OS theme)
+            local setAppMode = kernel32.GetProcAddress(hTheme, ffi.cast("const char*", 135))
+            if setAppMode ~= nil then
+                ffi.cast("int (*)(int)", setAppMode)(1)
+            else
+                -- Fallback: Ordinal 133 AllowDarkModeForApp for Win10 1809
+                local allowDark = kernel32.GetProcAddress(hTheme, ffi.cast("const char*", 133))
+                if allowDark ~= nil then
+                    ffi.cast("int (*)(int)", allowDark)(1)
+                end
+            end
+            
+            -- Ordinal 136: FlushMenuThemes to re-render context menus using the new app mode
+            local flushMenu = kernel32.GetProcAddress(hTheme, ffi.cast("const char*", 136))
+            if flushMenu ~= nil then
+                ffi.cast("void (*)()", flushMenu)()
+            end
+        end
+    end)
 end
 
 function Tray.makeTransparent()
@@ -167,14 +241,17 @@ function Tray.setClickThrough(enable)
     end
 end
 
-function Tray.showMenu()
+function Tray.setTopmost(topmost)
     if not hwnd then return end
-    local pt = ffi.new("POINT")
-    user32.GetCursorPos(pt)
-    
-    -- Spawn custom Love2D tray menu near the bottom right cursor
-    kernel32.WinExec(string.format('love . menu %d %d', pt.x, pt.y), 5)
+    local HWND_TOPMOST = ffi.cast("HWND", -1)
+    local HWND_NOTOPMOST = ffi.cast("HWND", -2)
+    local SWP_NOMOVE = 0x0002
+    local SWP_NOSIZE = 0x0001
+    local insertAfter = topmost and HWND_TOPMOST or HWND_NOTOPMOST
+    user32.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, bit.bor(SWP_NOMOVE, SWP_NOSIZE))
 end
+
+-- showMenu logic removed since Main loop orchestrates MMF UI spawning
 
 function Tray.showSpecificWindow(title)
     local specificHwnd = user32.FindWindowA(nil, title)

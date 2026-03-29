@@ -30,6 +30,8 @@ function Config.save(config)
             str = str .. "  " .. k .. " = {" .. table.concat(v, ", ") .. "},\n"
         elseif type(v) == "string" then
              str = str .. "  " .. k .. " = '" .. v .. "',\n"
+        elseif type(v) == "boolean" then
+            str = str .. "  " .. k .. " = " .. tostring(v) .. ",\n"
         else
             str = str .. "  " .. k .. " = " .. tostring(v) .. ",\n"
         end

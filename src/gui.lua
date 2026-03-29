@@ -23,6 +23,12 @@ function GUI.init(memConfig)
 end
 
 function GUI.update(dt)
+    if not GUI.config then return end
+    if GUI.config.shouldExit == 1 then
+        love.event.quit()
+        return
+    end
+
     local mx, my = love.mouse.getPosition()
     local mouseDown = love.mouse.isDown(1)
     
@@ -41,6 +47,12 @@ end
 
 function GUI.mousepressed(x, y, button)
     if button ~= 1 then return false end
+    
+    -- Toggle Topmost
+    if x >= 150 and x <= 194 and y >= 310 and y <= 334 then
+        GUI.config.isTopmost = (GUI.config.isTopmost == 1) and 0 or 1
+        return true
+    end
     
     local startY = 60
     for _, s in ipairs(GUI.sliders) do
@@ -78,6 +90,27 @@ end
 function GUI.draw()
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.print("Settings", 20, 20)
+    
+    love.graphics.print("Window Topmost", 20, 310)
+    
+    -- Draw Toggle Background
+    if GUI.config.isTopmost == 1 then
+        love.graphics.setColor(0.3, 0.8, 0.4) -- Green active
+    else
+        love.graphics.setColor(0.3, 0.3, 0.3) -- Gray inactive
+    end
+    love.graphics.rectangle("fill", 150, 310, 44, 24, 12, 12)
+    
+    -- Draw Toggle knob
+    love.graphics.setColor(1, 1, 1)
+    if GUI.config.isTopmost == 1 then
+        love.graphics.circle("fill", 150 + 32, 310 + 12, 9)
+    else
+        love.graphics.circle("fill", 150 + 12, 310 + 12, 9)
+    end
+    
+    love.graphics.setColor(1, 1, 1, 0.5)
+    love.graphics.print("v0.0.3 by Antigravity", 20, 380)
     
     local startY = 60
     for _, s in ipairs(GUI.sliders) do

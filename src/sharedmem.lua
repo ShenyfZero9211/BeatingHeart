@@ -37,6 +37,10 @@ ffi.cdef[[
         double posX;
         double posY;
         double shouldExit;
+        double menuX;
+        double menuY;
+        double showMenu;
+        double isTopmost;
     } SharedConfig;
 ]]
 

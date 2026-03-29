@@ -15,12 +15,28 @@ function Menu.init(config)
 end
 
 function Menu.update(dt)
+    if memConfig and memConfig.shouldExit == 1 then
+        love.event.quit()
+        return
+    end
+
     local mx, my = love.mouse.getPosition()
     hovered = nil
     for _, b in ipairs(buttons) do
         if mx >= 10 and mx <= 150 and my >= b.y and my <= b.y + b.h then
             hovered = b.action
         end
+    end
+    
+    if memConfig and memConfig.showMenu == 1 then
+        love.window.setPosition(memConfig.menuX - 80, memConfig.menuY - 100)
+        local Tray = require("src.tray")
+        Tray.restore()
+        memConfig.showMenu = 0
+    elseif memConfig and memConfig.showMenu == -1 then
+        local Tray = require("src.tray")
+        Tray.hide()
+        memConfig.showMenu = 0
     end
 end
 
@@ -31,12 +47,11 @@ function Menu.mousepressed(x, y, button)
             if not Tray.showSpecificWindow("Settings") then
                 Tray.spawnProcess('love . settings')
             end
-            love.event.quit()
+            Tray.hide()
         elseif hovered == "exit" then
             if memConfig then
                 memConfig.shouldExit = 1
             end
-            love.event.quit()
         end
     end
 end
@@ -64,9 +79,10 @@ function Menu.draw()
 end
 
 -- Replicate native WinUI behavior: close menu automatically if clicked away
-function love.focus(f)
+function Menu.focus(f)
     if not f then
-        love.event.quit()
+        local Tray = require("src.tray")
+        Tray.hide()
     end
 end
 

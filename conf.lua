@@ -42,8 +42,8 @@ function love.conf(t)
         t.modules.video = false
         t.modules.touch = false
     else
-        t.window.width = 450
-        t.window.height = 450
+        t.window.width = 800
+        t.window.height = 800
         t.window.title = "Beating Heart"
         t.window.borderless = true
         t.window.transparent = true

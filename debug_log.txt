@@ -1,0 +1,4 @@
+=== Beating Heart Startup Debug ===
+OS: Windows
+Time: 03/30/26 04:42:39
+[04:42:39] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc

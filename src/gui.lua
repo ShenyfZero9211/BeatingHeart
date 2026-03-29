@@ -7,29 +7,21 @@ local panelHeight = 500 -- 增加高度以容纳多语言和置顶项
 GUI.config = nil
 local isDragging = nil
 local dropdownOpen = false
-local chineseFont = nil
+local Fonts = require("src.fonts")
+local uiFont = nil
 
--- 存储各组件的动态 Y 坐标，用于鼠标点击判定同步
 local layout = {
     langY = 0,
     topmostY = 0,
     paletteY = 0
 }
 
--- 惰性加载中文字体
-local function getFont()
-    if not chineseFont then
-        local fonts_to_try = { "simhei.ttf", "msyh.ttc" }
-        for _, f in ipairs(fonts_to_try) do
-            local success, font = pcall(love.graphics.newFont, f, 14)
-            if success then
-                chineseFont = font
-                break
-            end
-        end
-        if not chineseFont then chineseFont = love.graphics.getFont() end
+-- 获取统一的 UI 字体
+function GUI.getUIFont()
+    if not uiFont then
+        uiFont = Fonts.load(14)
     end
-    return chineseFont
+    return uiFont
 end
 
 function GUI.init(memConfig)
@@ -131,7 +123,7 @@ end
 
 function GUI.draw()
     local langID = GUI.config and GUI.config.language or 0
-    love.graphics.setFont(getFont())
+    love.graphics.setFont(GUI.getUIFont())
 
     -- 背景与标题
     love.graphics.setColor(1, 1, 1, 0.9)
@@ -200,7 +192,7 @@ function GUI.draw()
     
     -- E. 渲染页脚
     love.graphics.setColor(1, 1, 1, 0.4)
-    love.graphics.print("v0.0.9 by SharpEye", 20, panelHeight - 40)
+    love.graphics.print("v0.1.2 by SharpEye", 20, panelHeight - 40)
     love.graphics.setColor(0.6, 0.6, 0.6, 1)
     love.graphics.print(i18n.get("close_hint", langID), 20, panelHeight - 30)
 

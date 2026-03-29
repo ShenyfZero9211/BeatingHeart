@@ -58,7 +58,13 @@ function Menu.mousepressed(x, y, button)
     end
 end
 
+local Fonts = require("src.fonts")
+local menuFont = nil
+
 function Menu.draw()
+    if not menuFont then menuFont = Fonts.load(14) end
+    love.graphics.setFont(menuFont)
+
     -- Create aesthetic frosted glass blur panel
     love.graphics.setColor(0.12, 0.12, 0.14, 0.95)
     love.graphics.rectangle("fill", 0, 0, 160, 100, 10)

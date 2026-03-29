@@ -23,6 +23,7 @@ function love.conf(t)
         t.modules.physics = false
         t.modules.joystick = false
         t.modules.thread = false
+        t.console = true                   -- Enable console to see WASAPI logs
         t.modules.video = false
         t.modules.touch = false
     elseif isMenu then
@@ -55,4 +56,5 @@ function love.conf(t)
     t.modules.system = true
     t.modules.timer = true
     t.modules.math = true
+    t.console = true                   -- Always show console for debugging WASAPI
 end

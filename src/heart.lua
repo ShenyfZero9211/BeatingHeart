@@ -44,8 +44,8 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     local t = love.timer.getTime()
     local aMotionFactor = a_motion * a_motion * a_motion -- 三阶映射增加位移平稳感
     local floatSpeed = 0.5 + aMotionFactor * 0.5
-    local floatX = math.sin(t * 0.7 * floatSpeed) * (5 + lowFactor * 12 + aMotionFactor * 35)
-    local floatY = math.cos(t * 0.5 * floatSpeed) * (5 + lowFactor * 12 + aMotionFactor * 35)
+    local floatX = math.sin(t * 0.7 * floatSpeed) * (2 + lowFactor * 12 + aMotionFactor * 35)
+    local floatY = math.cos(t * 0.5 * floatSpeed) * (3 + lowFactor * 12 + aMotionFactor * 35)
     love.graphics.translate(x + floatX, y + floatY)
     
     -- ===== 仿生感知维度 (Bionic Sensing Layers) =====

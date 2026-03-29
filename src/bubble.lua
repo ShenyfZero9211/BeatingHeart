@@ -5,27 +5,15 @@ local i18n = require("src.i18n")
 
 local spawnTimer = 0
 local lastArousal = 0
-local chineseFont = nil
+local Fonts = require("src.fonts")
+local bubbleFont = nil
 
 -- 惰性加载中文字体，确保高性能和稳定性
 local function getFont()
-    if not chineseFont then
-        -- 依次尝试加载：黑体(simhei.ttf)、微软雅黑(msyh.ttc)
-        local fonts_to_try = { "simhei.ttf", "msyh.ttc" }
-        for _, f in ipairs(fonts_to_try) do
-            local success, font = pcall(love.graphics.newFont, f, 16)
-            if success then
-                chineseFont = font
-                break
-            end
-        end
-        
-        -- 如果都失败了，回退到默认字体（此时依然可能乱码，但程序至少能跑）
-        if not chineseFont then
-            chineseFont = love.graphics.getFont()
-        end
+    if not bubbleFont then
+        bubbleFont = Fonts.load(16)
     end
-    return chineseFont
+    return bubbleFont
 end
 
 function Bubble.spawn(arousal, memConfig)

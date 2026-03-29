@@ -28,6 +28,16 @@ local sensoryGate = 0.1 -- 感官唤醒门限 (0.1 ~ 1.0)
 local Audio, Heart, Tray, Bubble
 
 function love.load(args)
+    -- [DIAGNOSTIC] 强制写入日志文件
+    local logFile = io.open("debug_log.txt", "w")
+    if logFile then
+        logFile:write("=== Beating Heart Startup Debug ===\n")
+        logFile:write("OS: " .. love.system.getOS() .. "\n")
+        logFile:write("Time: " .. os.date() .. "\n")
+        logFile:close()
+    end
+    print("[ENGINE] System awakening initiated...")
+
     if args then
         for i, v in ipairs(args) do
             if v == "settings" then isSettingsMode = true end
@@ -130,18 +140,20 @@ function love.update(dt)
             sensoryGate = math.max(0.1, sensoryGate - dt * 0.04) 
         end
         
-        -- 应用唤醒系数
+        -- 应用唤醒系数与灵敏度
         lowF = lowF * memConfig.sensitivity * sensoryGate
         midF = midF * memConfig.sensitivity * sensoryGate
         hiF = hiF * memConfig.sensitivity * sensoryGate
         
-        -- The Spring-Mass Simulation for organic heartbeats!
-        local rawEnergy = lowF -- 只有低频层驱动弹性缩放
+        -- [BEAT BOOSTER] 律动爆发力增强：采用 1.4 次幂非线性增益，调大体积膨胀系数
+        -- 这种非线性放大能让重鼓点（Dong-Ci）的瞬间冲击感极度明显
+        local rawEnergy = math.pow(lowF, 1.4) * 3.5 
         
-        -- Bionic Logic: Accumulated Arousal (生理动量/热量累积)
-        local heatInput = (rawEnergy * 1.5 + beatPulse * 2.0) * dt
+        -- Bionic Logic: Accumulated Arousal (生理热量累积)
+        -- 将节拍脉冲的权重也同步拉升
+        local heatInput = (rawEnergy * 1.5 + beatPulse * 3.0) * dt
         if heatInput > 0.01 then
-            targetArousal = math.min(1.0, targetArousal + heatInput * 1.2)
+            targetArousal = math.min(1.0, targetArousal + heatInput * 1.5)
         else
             targetArousal = math.max(0.0, targetArousal - dt * 0.05)
         end
@@ -158,11 +170,11 @@ function love.update(dt)
         local finalTarget = targetArousal * arousalBuffer
         arousal = arousal + (finalTarget - arousal) * dt * 1.5
         
-        -- ASR 分层感官推进 (进一步调重惯性)
+        -- ASR 分层感官：显著削弱 Motion 也就是漂移幅度的累积
         arousalColor = arousalColor + (arousal - arousalColor) * dt * 5.0
         arousalSpeed = arousalSpeed + (arousal - arousalSpeed) * dt * 1.5
         arousalScale = arousalScale + (arousal - arousalScale) * dt * 0.4
-        arousalMotion = arousalMotion + (arousal - arousalMotion) * dt * 0.15
+        arousalMotion = (arousalMotion + (arousal - arousalMotion) * dt * 0.08) * 0.6 -- 大幅收缩漂浮感
         
         -- 相位积分器: 彻底接管绝对时间，基于分层频率（arousalSpeed）驱动心跳频率
         -- 极致平滑频率感 (0.2 逼近速度)，实现马拉松式的加速过程
@@ -170,7 +182,7 @@ function love.update(dt)
         phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 0.2
         beatPhase = beatPhase + phaseSpeed * dt
         
-        local targetScale = rawEnergy * 2.0 -- Target inflation
+        local targetScale = rawEnergy -- 直接应用增强后的能量
         
         -- 随情绪动态改变阻尼和刚度
         -- 舒缓模式 (arousal=0): 刚度极低(25)，模拟水母般的浮动

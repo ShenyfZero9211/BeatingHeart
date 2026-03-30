@@ -1,3 +1,210 @@
 === Beating Heart Startup Debug ===
 OS: Windows
-Time: 03/30/26 05:29:26
+Time: 03/31/26 00:06:45
+[00:06:45] [I18N] Final Detected Language: zh_windows
+[00:11:46] [I18N] Final Detected Language: zh_windows
+[00:11:46] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:11:46] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:11:46] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:11:46] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:11:46] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:12:45] [I18N] Final Detected Language: zh_windows
+[00:12:45] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:12:45] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:12:45] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:12:45] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:12:45] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:14:44] [I18N] Final Detected Language: zh_windows
+[00:14:44] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:14:44] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:14:44] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:14:44] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:14:44] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:18:32] [I18N] Final Detected Language: zh_windows
+[00:18:32] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:18:32] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:18:32] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:18:32] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:18:32] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:18:47] [I18N] Final Detected Language: zh_windows
+[00:18:47] [I18N] Final Detected Language: zh_windows
+[00:18:47] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:18:47] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:18:47] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:18:53] [I18N] Final Detected Language: zh_windows
+[00:18:53] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:18:53] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:18:53] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:18:53] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:18:53] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:19:18] [I18N] Final Detected Language: zh_windows
+[00:19:18] [I18N] Final Detected Language: zh_windows
+[00:19:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:19:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:19:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:19:39] [I18N] Final Detected Language: zh_windows
+[00:19:39] [I18N] Final Detected Language: zh_windows
+[00:19:39] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:19:39] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:19:39] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:12] [I18N] Final Detected Language: zh_windows
+[00:20:12] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:20:12] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:20:12] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:20:12] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:20:12] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:20] [I18N] Final Detected Language: zh_windows
+[00:20:20] [I18N] Final Detected Language: zh_windows
+[00:20:20] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:20] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:20] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:31] [I18N] Final Detected Language: zh_windows
+[00:20:31] [I18N] Final Detected Language: zh_windows
+[00:20:31] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:31] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:20:31] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:21:01] [I18N] Final Detected Language: zh_windows
+[00:21:01] [I18N] Final Detected Language: zh_windows
+[00:21:01] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:21:01] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:21:01] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:21:13] [I18N] Final Detected Language: zh_windows
+[00:21:13] [I18N] Final Detected Language: zh_windows
+[00:21:13] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:21:13] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:21:13] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:22:28] [I18N] Final Detected Language: zh_windows
+[00:22:28] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:22:28] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:22:28] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:22:28] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:22:28] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:22:37] [I18N] Final Detected Language: zh_windows
+[00:22:37] [I18N] Final Detected Language: zh_windows
+[00:22:37] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:22:37] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:22:37] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:22:48] [I18N] Final Detected Language: zh_windows
+[00:22:48] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:22:48] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:22:48] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:22:48] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:22:49] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:25:10] [I18N] Final Detected Language: zh_windows
+[00:25:10] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:25:10] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:25:10] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:25:10] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:25:10] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:25:15] [I18N] Final Detected Language: zh_windows
+[00:26:03] [I18N] Final Detected Language: zh_windows
+[00:26:03] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:26:03] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:26:03] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:26:03] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:26:03] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:08] [I18N] Final Detected Language: zh_windows
+[00:26:08] [I18N] Final Detected Language: zh_windows
+[00:26:08] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:08] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:08] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:25] [I18N] Final Detected Language: zh_windows
+[00:26:25] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:26:25] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:26:25] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:26:25] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:26:25] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:34] [I18N] Final Detected Language: zh_windows
+[00:26:34] [I18N] Final Detected Language: zh_windows
+[00:26:34] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:34] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:34] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:26:58] [I18N] Final Detected Language: zh_windows
+[00:26:58] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:26:58] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:26:58] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:26:58] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:26:58] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:05] [I18N] Final Detected Language: zh_windows
+[00:27:05] [I18N] Final Detected Language: zh_windows
+[00:27:05] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:05] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:05] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:18] [I18N] Final Detected Language: zh_windows
+[00:27:18] [I18N] Final Detected Language: zh_windows
+[00:27:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:27:51] [I18N] Final Detected Language: zh_windows
+[00:27:51] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:27:51] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:27:51] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:27:51] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:27:51] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:28:00] [I18N] Final Detected Language: zh_windows
+[00:28:00] [I18N] Final Detected Language: zh_windows
+[00:28:00] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:28:00] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:28:00] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:31:55] [I18N] Final Detected Language: zh_windows
+[00:31:55] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:31:55] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:31:55] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:31:55] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:31:55] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:31:59] [I18N] Final Detected Language: zh_windows
+[00:31:59] [I18N] Final Detected Language: zh_windows
+[00:31:59] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:31:59] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:32:00] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:32:18] [I18N] Final Detected Language: zh_windows
+[00:32:18] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:32:18] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:32:18] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:32:18] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:32:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:32:23] [I18N] Final Detected Language: zh_windows
+[00:32:23] [I18N] Final Detected Language: zh_windows
+[00:32:23] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:32:23] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:32:23] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:32:58] [I18N] Final Detected Language: zh_windows
+[00:32:58] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:32:58] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:32:58] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:32:58] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:32:58] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:34:18] [I18N] Final Detected Language: zh_windows
+[00:34:18] [I18N] Final Detected Language: zh_windows
+[00:34:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:34:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:34:18] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:38:59] [I18N] Final Detected Language: zh_windows
+[00:38:59] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:38:59] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:38:59] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:38:59] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:38:59] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:39:07] [I18N] Final Detected Language: zh_windows
+[00:39:07] [I18N] Final Detected Language: zh_windows
+[00:39:07] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:39:17] [I18N] Final Detected Language: zh_windows
+[00:39:17] [I18N] Final Detected Language: zh_windows
+[00:39:17] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[00:59:23] [I18N] Final Detected Language: zh_windows
+[00:59:23] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[00:59:23] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[00:59:23] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[00:59:23] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[00:59:24] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc
+[01:10:59] [I18N] Final Detected Language: zh_windows
+[01:10:59] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[01:10:59] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[01:10:59] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[01:10:59] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[01:11:56] [I18N] Final Detected Language: zh_windows
+[01:11:56] [WASAPI] (v1.05) Attempting to load wasapi_bridge.dll...
+[01:11:56] [WASAPI] DLL Linked Successfully. Initializing Endpoint...
+[01:11:56] [WASAPI] HW FORMAT DETECTED: 8 channels, 32 bits, 48000 Hz
+[01:11:56] [WASAPI] SUCCESS: Native Hardware Engine is Running.
+[01:11:56] [FONTS] SUCCESS: Loaded system font from C:\WINDOWS\Fonts\msyh.ttc

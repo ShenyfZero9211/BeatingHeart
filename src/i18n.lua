@@ -42,17 +42,42 @@ local translations = {
 local detectedLang = 1 -- Default to EN
 
 function i18n.init()
-    -- 安全探测系统语言 (Handle older LOVE2D versions)
     local lang = "en"
-    if love.system.getLanguage then
-        lang = love.system.getLanguage()
-    else
-        -- Fallback: 通过环境变量或系统区域设置尝试探测
-        local locale = os.getenv("LANG") or os.setlocale(nil) or "en"
-        lang = locale:lower()
+    
+    -- Windows 特化探测：love.system.getLanguage 在某些环境下可能返回 en_us
+    -- 但 GetUserDefaultUILanguage 能直接从内核获取 UI 语言设置
+    if love.system.getOS() == "Windows" then
+        local success, ffi = pcall(require, "ffi")
+        if success then
+            pcall(function()
+                ffi.cdef[[
+                    unsigned short GetUserDefaultUILanguage();
+                ]]
+                local langID = ffi.C.GetUserDefaultUILanguage()
+                -- 0x0804: zh-CN, 0x0404: zh-TW, 0x0C04: zh-HK, 0x1004: zh-SG
+                if langID == 0x0804 or langID == 0x0404 or langID == 0x0C04 or langID == 0x1004 then
+                    lang = "zh_windows"
+                end
+            end)
+        end
+    end
+
+    if lang == "en" then
+        if love.system.getLanguage then
+            lang = love.system.getLanguage()
+        else
+            local locale = os.getenv("LANG") or os.setlocale(nil) or "en"
+            lang = locale:lower()
+        end
     end
     
-    if lang:find("zh") or lang:find("chinese") then
+    local f = io.open("debug_log.txt", "a")
+    if f then
+        f:write(os.date("[%H:%M:%S] ") .. "[I18N] Final Detected Language: " .. lang .. "\n")
+        f:close()
+    end
+    
+    if lang:find("zh") or lang:find("chi") or lang:find("936") then
         detectedLang = 2
     else
         detectedLang = 1

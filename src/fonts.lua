@@ -12,7 +12,22 @@ local function logToFile(msg)
     end
 end
 
+local cache = {}
+
 function Fonts.load(size)
+    size = size or 14
+    if cache[size] then return cache[size] end
+
+    -- [OPTIMIZED] 缓存原始二进制数据，避免为不同字号重复读取大文件
+    if Fonts.rawData then
+        local fileData = love.filesystem.newFileData(Fonts.rawData, "tempfont." .. (Fonts.rawExt or "ttf"))
+        local success, res = pcall(love.graphics.newFont, fileData, size)
+        if success then
+            cache[size] = res
+            return res
+        end
+    end
+
     local windir = os.getenv("WINDIR") or "C:\\Windows"
     local paths = {
         windir .. "\\Fonts\\msyh.ttc",   -- 微软雅黑
@@ -29,13 +44,14 @@ function Fonts.load(size)
             file:close()
             
             if data and #data > 0 then
-                -- 核心修复：手动指定 extension，引导 Love2D 正确调用 Vector 引擎
                 local ext = path:match("%.(%w+)$") or "ttf"
                 local fileData = love.filesystem.newFileData(data, "tempfont." .. ext)
                 
                 local success, res = pcall(love.graphics.newFont, fileData, size)
                 if success then
                     logToFile("[FONTS] SUCCESS: Loaded system font from " .. path)
+                    Fonts.rawData = data -- 缓存并共享给该进程的其他字号请求
+                    Fonts.rawExt = ext
                     font = res
                     break
                 else
@@ -52,6 +68,7 @@ function Fonts.load(size)
         font = love.graphics.newFont(size)
     end
 
+    cache[size] = font
     return font
 end
 

@@ -6,120 +6,98 @@ local isSettingsMode = false
 local isMenuMode = false
 local draggingWindow = false
 local dragOffsetX, dragOffsetY = 0, 0
-local lastSetSize = 0
 local lastTopmost = -1
-local menuSpawned = false
+local sensoryGate = 0.1 
+local arousalBuffer = 0.0
+local arousalSway = 0.0
+local heartFloatX, heartFloatY = 0, 0
 
 -- Physics State for Heart organic animation
 local currentScale = 0
 local currentVelocity = 0
 
--- Bionic Brain Logic: Asynchronous Synesthetic Response (ASR)
-local arousal = 0.0          -- 核心情绪底色
-local arousalColor = 0.0     -- 颜色响应 (极快: 5.0)
-local arousalSpeed = 0.0     -- 频率响应 (中速: 1.5)
-local arousalScale = 0.0     -- 体积响应 (慢速: 0.6)
-local arousalMotion = 0.0    -- 位移响应 (极慢: 0.2)
-local excitationMomentum = 0.0 -- [NEW] 兴奋动量：用于追踪长时间的高频激昂状态
+-- Bionic Brain Logic
+local arousal = 0.0
+local arousalColor = 0.0
+local arousalSpeed = 0.0
+local arousalScale = 0.0
+local arousalMotion = 0.0
+local excitationMomentum = 0.0
 local targetArousal = 0.0
 local beatPhase = 0.0
 local phaseSpeed = 2.5
-local sensoryGate = 0.1 -- 感官唤醒门限 (0.1 ~ 1.0)
 
 local Audio, Heart, Tray, Bubble
 
 function love.load(args)
-    -- [DIAGNOSTIC] 强制写入日志文件
-    local logFile = io.open("debug_log.txt", "w")
-    if logFile then
-        logFile:write("=== Beating Heart Startup Debug ===\n")
-        logFile:write("OS: " .. love.system.getOS() .. "\n")
-        logFile:write("Time: " .. os.date() .. "\n")
-        logFile:close()
-    end
-    print("[ENGINE] System awakening initiated...")
-
     if args then
-        for i, v in ipairs(args) do
+        for _, v in ipairs(args) do
             if v == "settings" then isSettingsMode = true end
             if v == "menu" then isMenuMode = true end
         end
     end
-    
+
     local isFirstInstance = false
     memConfig, isFirstInstance = SharedMem.init()
     
-    -- [IRON PULSE] 互斥体单例保护：非第一实例直接自杀，不留痕迹
     if not isFirstInstance and not isSettingsMode and not isMenuMode then
-        print("[SYSTEM] Mutex locked. Another instance is active. Fast Exit.")
         love.event.quit()
         return
     end
-    
-    if memConfig then
-        memConfig.shouldExit = 0
+
+    if isMenuMode then
+        Tray = require("src.tray")
+        Tray.init("BeatingHeartMenu", memConfig, true)
+        Tray.hideFromTaskbar() -- 完全从任务栏消失
+        Tray.showNativeMenu(memConfig)
+        love.event.quit()
+        return
     end
-    
-    if not memConfig then 
-        memConfig = {size=150, sensitivity=1.0, color_r=1, color_g=0.2, color_b=0.3, color_a=1, posX=100, posY=100, shouldExit=0, menuX=0, menuY=0, showMenu=0, isTopmost=1, language=0}
-    else
-        local i18n = require("src.i18n")
-        i18n.init()
-        
-        if not isSettingsMode and not isMenuMode then
-            local localConfig = Config.load()
-            memConfig.size = localConfig.size or 150
-            memConfig.sensitivity = localConfig.sensitivity or 1.0
-            memConfig.color_r = localConfig.color and localConfig.color[1] or 1
-            memConfig.color_g = localConfig.color and localConfig.color[2] or 0.2
-            memConfig.color_b = localConfig.color and localConfig.color[3] or 0.3
-            memConfig.color_a = localConfig.color and localConfig.color[4] or 1
-            memConfig.posX = localConfig.posX or 100
-            memConfig.posY = localConfig.posY or 100
-            memConfig.isTopmost = (localConfig.isTopmost == nil) and 1 or localConfig.isTopmost
-            memConfig.language = localConfig.language or 0
-        end
+
+    if isFirstInstance then
+        local localConfig = Config.load()
+        memConfig.size = localConfig.size or 150
+        memConfig.sensitivity = localConfig.sensitivity or 1.0
+        memConfig.color_r = localConfig.color_r or 1
+        memConfig.color_g = localConfig.color_g or 0.2
+        memConfig.color_b = localConfig.color_b or 0.3
+        memConfig.color_a = localConfig.color_a or 1
+        memConfig.posX = localConfig.posX or 100
+        memConfig.posY = localConfig.posY or 100
+        memConfig.isTopmost = (localConfig.isTopmost == nil) and 1 or localConfig.isTopmost
+        memConfig.language = localConfig.language or 0
     end
+
+    local i18n = require("src.i18n")
+    i18n.init()
+    
+    Tray = require("src.tray")
     
     if isSettingsMode then
         local GUI = require("src.gui")
-        Tray = require("src.tray")
-        Tray.init("Settings", nil, nil, true, memConfig)
+        Tray.init("Settings", memConfig, true) 
+        Tray.makeTransparent()
         Tray.hideFromTaskbar()
         GUI.init(memConfig)
-        love.graphics.setBackgroundColor(0.12, 0.12, 0.14)
-        
-    elseif isMenuMode then
-        local Menu = require("src.traymenu")
-        Tray = require("src.tray")
-        Tray.init("BeatingHeartMenu", nil, nil, true)
-        Tray.hideFromTaskbar()
-        Tray.makeTransparent()
-        Menu.init(memConfig)
-        
+        love.graphics.setBackgroundColor(0, 0, 0, 0)
     else
         Heart = require("src.heart")
         Audio = require("src.audio")
-        Tray = require("src.tray")
         Bubble = require("src.bubble")
         
         love.graphics.setBackgroundColor(0, 0, 0, 0)
         Audio.init()
         
         love.timer.sleep(0.01)
-        Tray.init("Beating Heart", function()
-            -- Native Tray menu clicked "Settings" -> load standard Settings layout dialog
-            if not Tray.showSpecificWindow("Settings") then
-                Tray.spawnProcess('love . settings')
-            end
-        end, function()
-            memConfig.shouldExit = 1
-            love.event.quit()
-        end, false, memConfig)
-        
+        Tray.init("Beating Heart", memConfig)
         Tray.makeTransparent()
         Tray.hideFromTaskbar()
         love.window.setPosition(memConfig.posX, memConfig.posY)
+        
+        -- Default startup state
+        Tray.setClickThrough(true)
+        Tray.setTopmost(memConfig.isTopmost == 1)
+        lastTopmost = memConfig.isTopmost
     end
 end
 
@@ -128,10 +106,13 @@ function love.update(dt)
         local GUI = require("src.gui")
         GUI.update(dt)
         
+        if draggingWindow then
+            local mx, my = Tray.getCursorPos()
+            local newX, newY = mx - dragOffsetX, my - dragOffsetY
+            love.window.setPosition(newX, newY)
+        end
     elseif isMenuMode then
-        local Menu = require("src.traymenu")
-        Menu.update(dt)
-        
+        -- Native Menu blocks
     else
         if memConfig.shouldExit == 1 then
             love.event.quit()
@@ -142,24 +123,19 @@ function love.update(dt)
         local lowF, midF, hiF = Audio.getBands()
         local beatPulse = Audio.getBeatPulse()
         
-        -- 生态唤醒逻辑：极致降速至 12-15 秒完全唤醒
+        -- 生态唤醒逻辑
         if lowF > 0.05 or midF > 0.05 then
             sensoryGate = math.min(1.0, sensoryGate + dt * 0.08) 
         else
             sensoryGate = math.max(0.1, sensoryGate - dt * 0.04) 
         end
         
-        -- 应用唤醒系数与灵敏度
+        -- 应用设置
         lowF = lowF * memConfig.sensitivity * sensoryGate
         midF = midF * memConfig.sensitivity * sensoryGate
         hiF = hiF * memConfig.sensitivity * sensoryGate
         
-        -- [BEAT BOOSTER v2] 极致节奏爆发：采用 1.8 次幂非线性增益，调大基础膨胀倍率至 8.0
-        -- 这种设计能让轻音乐保持优雅，但在“动次打次”响起的瞬间，心脏会产生极具张力的收张感
         local rawEnergy = math.pow(lowF, 1.8) * 8.0 
-        
-        -- Bionic Logic: Accumulated Arousal (生理热量累积)
-        -- 节拍冲击直接参与 Arousal 累积
         local heatInput = (rawEnergy * 1.5 + beatPulse * 4.0) * dt
         if heatInput > 0.01 then
             targetArousal = math.min(1.0, targetArousal + heatInput * 1.5)
@@ -167,47 +143,38 @@ function love.update(dt)
             targetArousal = math.max(0.0, targetArousal - dt * 0.05)
         end
         
-        -- [Epic Awakening] 认知延迟缓冲区：情绪并不是瞬间爆开的
-        arousalBuffer = arousalBuffer or 0.0
         if targetArousal > 0.1 then
-            arousalBuffer = math.min(1.0, arousalBuffer + dt * 0.1) -- 10s 缓冲区
+            arousalBuffer = math.min(1.0, arousalBuffer + dt * 0.1)
         else
             arousalBuffer = math.max(0.0, arousalBuffer - dt * 0.05)
         end
         
-        -- 最终情绪结合缓冲区 (增加惯性，响应速度 1.5)
         local finalTarget = targetArousal * arousalBuffer
         arousal = arousal + (finalTarget - arousal) * dt * 1.5
         
-        -- ASR 分层感官：显著削弱 Motion 也就是漂移幅度的累积
         arousalColor = arousalColor + (arousal - arousalColor) * dt * 5.0
         arousalSpeed = arousalSpeed + (arousal - arousalSpeed) * dt * 1.5
         arousalScale = arousalScale + (arousal - arousalScale) * dt * 0.4
-        arousalMotion = (arousalMotion + (arousal - arousalMotion) * dt * 0.08) * 0.6 -- 大幅收缩漂浮感
+        arousalMotion = arousalMotion + (arousal - arousalMotion) * dt * 0.08
         
-        -- 相位积分器: 彻底接管绝对时间，基于分层频率（arousalSpeed）驱动心跳频率
-        -- 极致平滑频率感 (0.2 逼近速度)，实现马拉松式的加速过程
+        -- [MOMENTUM SWAY] 动能累加逻辑：积累慢(0.3)，衰减更慢(0.15)
+        local swayTarget = arousal * 0.8 + beatPulse * 0.2
+        local swayAlpha = (swayTarget > arousalSway) and 0.3 or 0.15
+        arousalSway = arousalSway + (swayTarget - arousalSway) * dt * swayAlpha
+        
         local targetPhaseSpeed = 2.5 + arousalSpeed * 9.5
         phaseSpeed = phaseSpeed + (targetPhaseSpeed - phaseSpeed) * dt * 0.2
         beatPhase = beatPhase + phaseSpeed * dt
         
-        local targetScale = rawEnergy -- 直接应用增强后的能量
-        
-        -- 随情绪动态改变阻尼和刚度
-        -- 舒缓模式 (arousal=0): 刚度极低(25)，模拟水母般的浮动
-        -- 节奏模式 (arousal=1): 刚度极高(160)，模拟强力泵血
-        -- 随情绪动态改变阻尼和刚度 (物理回弹优化)
-        -- 在高能模式下极大地提升 K 值 (由 135 提升至 350+)，产生清脆回弹
+        local targetScale = rawEnergy
         local springK = 35.0 + arousal * 320.0  
         local damping = 16.0 - arousal * 11.0   
         
         local force = (targetScale - currentScale) * springK - currentVelocity * damping
         currentVelocity = currentVelocity + force * dt
         currentScale = currentScale + currentVelocity * dt
-        
         if currentScale < 0 then currentScale = 0 end
         
-        -- Apply Z-Order Topmost synchronization
         if lastTopmost ~= memConfig.isTopmost then
             Tray.setTopmost(memConfig.isTopmost == 1)
             lastTopmost = memConfig.isTopmost
@@ -221,15 +188,25 @@ function love.update(dt)
             memConfig.posY = newY
         end
         
-        -- Pixel-perfect Ghost Window Hit-Testing
+        -- [DRAG OPTIMIZATION] 移动物理到逻辑层，实现像素级精准判定
+        local t = love.timer.getTime()
+        local aSwayFactor = arousalSway * arousalSway
+        local floatSpeed = 0.4 + aSwayFactor * 0.4
+        heartFloatX = math.sin(t * 0.7 * floatSpeed) * (2 + lowF * 10 + aSwayFactor * 40)
+        heartFloatY = math.cos(t * 0.5 * floatSpeed) * (3 + lowF * 10 + aSwayFactor * 40)
+
+        -- Hit-Testing for click-through (同步缩放与位移)
         local wx, wy = love.window.getPosition()
         local mx, my = Tray.getCursorPos()
-        local localX, localY = mx - wx, my - wy
-        
-        -- Approximate radius constraint (the heart draws up to roughly 0.8 * size)
         local winW, winH = love.graphics.getDimensions()
-        local dist2 = (localX - winW/2)^2 + (localY - winH/2)^2
-        local hitRadius = memConfig.size * 0.95
+        
+        -- 核心：判定圆心随心脏位移同步偏移
+        local centerX, centerY = winW/2 + heartFloatX, winH/2 + heartFloatY
+        local dist2 = (mx - wx - centerX)^2 + (my - wy - centerY)^2
+        
+        -- 核心：判定半径计入实时跳动缩放(currentScale)，并增加 20% 缓冲区
+        local pulseScale = 1.0 + currentScale * 0.4
+        local hitRadius = memConfig.size * pulseScale * 1.2
         
         if dist2 > hitRadius^2 and not draggingWindow then
             Tray.setClickThrough(true)
@@ -237,11 +214,10 @@ function love.update(dt)
             Tray.setClickThrough(false)
         end
         
-        -- [EXCITEMENT MOMENTUM] 生理动量累积：长时间处于高能状态的“有机记忆”
         if arousal > 0.75 then
-            excitationMomentum = math.min(1.0, excitationMomentum + dt * 0.06) -- 约 16s 积满
+            excitationMomentum = math.min(1.0, excitationMomentum + dt * 0.06)
         else
-            excitationMomentum = math.max(0.0, excitationMomentum - dt * 0.12) -- 衰退速度较快 (约 8s)
+            excitationMomentum = math.max(0.0, excitationMomentum - dt * 0.12)
         end
         
         Bubble.update(dt, arousal, memConfig)
@@ -253,13 +229,11 @@ function love.draw()
         local GUI = require("src.gui")
         GUI.draw()
     elseif isMenuMode then
-        local Menu = require("src.traymenu")
-        Menu.draw()
+        -- Nothing
     else
         love.graphics.clear(0, 0, 0, 0)
         local w, h = love.graphics.getDimensions()
         
-        -- Aesthetic Color Infusion (基于 arousalColor 驱动)
         local baseR = memConfig.color_r + (arousalColor * 0.2)
         local baseG = memConfig.color_g - ((1.0 - arousalColor) * 0.1)
         local baseB = memConfig.color_b + ((1.0 - arousalColor) * 0.15)
@@ -269,61 +243,49 @@ function love.draw()
         local b = math.min(1, math.max(0, baseB - currentScale * 0.2))
 
         local lowF, midF, hiF = Audio.getBands()
-        local beatPulse = Audio.getBeatPulse()
         lowF = lowF * memConfig.sensitivity * sensoryGate
         midF = midF * memConfig.sensitivity * sensoryGate
         hiF = hiF * memConfig.sensitivity * sensoryGate
         
-        -- 传递 ASR 分层参数到渲染器
         local arousalTable = {
-            color = arousalColor,
-            speed = arousalSpeed,
-            scale = arousalScale,
-            motion = arousalMotion
+            color = arousalColor, speed = arousalSpeed,
+            scale = arousalScale, motion = arousalMotion,
+            sway = arousalSway,
+            floatX = heartFloatX, floatY = heartFloatY -- 传给渲染器同步显示
         }
         
-        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, beatPulse, excitationMomentum)
-        
-        -- 渲染情感气泡
+        Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, Audio.getBeatPulse(), excitationMomentum)
         Bubble.draw(w/2, h/2)
     end
 end
 
 function love.keypressed(key)
     if key == "escape" then
-        if isSettingsMode or isMenuMode then
-            Tray.hide()
-        else
-            Tray.hide()
-        end
+        love.event.quit()
     end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
     if isSettingsMode then
         local GUI = require("src.gui")
-        GUI.mousepressed(x, y, button)
-        return
-    elseif isMenuMode then
-        local Menu = require("src.traymenu")
-        Menu.mousepressed(x, y, button)
+        if GUI.mousepressed(x, y, button) then return end
+        
+        if button == 1 and GUI.isTitleAreaHit(x, y) then
+            draggingWindow = true
+            local wx, wy = love.window.getPosition()
+            local mx, my = Tray.getCursorPos()
+            dragOffsetX = mx - wx
+            dragOffsetY = my - wy
+        end
         return
     end
     
     if button == 1 then
-        memConfig.showMenu = -1 -- Explicitly banish customized tray menu upon main window interaction
         draggingWindow = true
         local wx, wy = love.window.getPosition()
         local mx, my = Tray.getCursorPos()
         dragOffsetX = mx - wx
         dragOffsetY = my - wy
-    end
-end
-
-function love.focus(f)
-    if isMenuMode then
-        local Menu = require("src.traymenu")
-        if Menu.focus then Menu.focus(f) end
     end
 end
 
@@ -334,26 +296,22 @@ function love.mousereleased(x, y, button, istouch, presses)
 end
 
 function love.quit()
-    -- 1. [CRITICAL] 只有当驱动加载成功后才尝试关闭
-    if Audio and Audio.stop then
-        Audio.stop()
-    end
-
-    if not isSettingsMode and not isMenuMode and memConfig then
+    if Audio and Audio.stop then Audio.stop() end
+    if memConfig and not isMenuMode then
         Config.save({
             size = memConfig.size,
             sensitivity = memConfig.sensitivity,
-            color = {memConfig.color_r, memConfig.color_g, memConfig.color_b, memConfig.color_a},
+            color_r = memConfig.color_r,
+            color_g = memConfig.color_g,
+            color_b = memConfig.color_b,
+            color_a = memConfig.color_a,
             posX = memConfig.posX,
             posY = memConfig.posY,
             isTopmost = memConfig.isTopmost,
             language = memConfig.language
         })
     end
-    
     if Tray and Tray.cleanup then Tray.cleanup() end
     if SharedMem and SharedMem.cleanup then SharedMem.cleanup() end
-    
-    print("[SYSTEM] Fast exit path engaged.")
     return false
 end

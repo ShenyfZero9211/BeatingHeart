@@ -84,15 +84,11 @@ ffi.cdef[[
     
     int DwmExtendFrameIntoClientArea(HWND hWnd, const MARGINS* pMarInset);
     unsigned int WinExec(const char* lpCmdLine, unsigned int uCmdShow);
-    
-    HRGN CreateEllipticRgn(int x1, int y1, int x2, int y2);
-    int SetWindowRgn(HWND hWnd, HRGN hRgn, int bRedraw);
 ]]
 
 local shell32 = ffi.load("shell32")
 local user32 = ffi.load("user32")
 local kernel32 = ffi.load("kernel32")
-local gdi32 = ffi.load("gdi32")
 local dwmapi = nil
 pcall(function() dwmapi = ffi.load("dwmapi") end)
 
@@ -111,20 +107,52 @@ local nid = nil
 local oldWndProc = nil
 local wndProcCallback = nil
 
-local onSettingsCallback = nil
-local onExitCallback = nil
-local memConfig = nil
-local i18n = require("src.i18n")
-
-function Tray.init(windowTitle, onSettings, onExit, noIcon, config)
-    onSettingsCallback = onSettings
-    onExitCallback = onExit
-    memConfig = config
+function Tray.showNativeMenu(config)
+    -- This is called by the INVISIBLE helper process ('love . menu')
+    local pt = ffi.new("POINT")
+    user32.GetCursorPos(pt)
     
-    hwnd = user32.FindWindowA(nil, windowTitle)
-    if not hwnd then
-        return
+    -- Try to find a window with the menu name, fallback to main
+    local hwndMenu = user32.FindWindowA(nil, "BeatingHeartMenu")
+    if not hwndMenu or ffi.cast("intptr_t", hwndMenu) == 0 then
+        hwndMenu = user32.FindWindowA(nil, "Beating Heart")
     end
+    
+    if not hwndMenu then return end
+    
+    user32.SetForegroundWindow(hwndMenu)
+    local hMenu = user32.CreatePopupMenu()
+    
+    local function utf8_to_utf16(str)
+        local len = kernel32.MultiByteToWideChar(65001, 0, str, -1, nil, 0)
+        local buf = ffi.new("wchar_t[?]", len)
+        kernel32.MultiByteToWideChar(65001, 0, str, -1, buf, len)
+        return buf
+    end
+    
+    local i18n = require("src.i18n")
+    local langID = config and config.language or 0
+    user32.InsertMenuW(hMenu, 0, 0x00000000, 1001, utf8_to_utf16(i18n.get("tray_settings", langID)))
+    user32.InsertMenuW(hMenu, 1, 0x00000800, 0, nil) -- SEPARATOR
+    user32.InsertMenuW(hMenu, 2, 0x00000000, 1002, utf8_to_utf16(i18n.get("tray_exit", langID)))
+    
+    -- TPM_RETURNCMD=0x0100, TPM_RIGHTBUTTON=0x0002
+    local cmd = user32.TrackPopupMenu(hMenu, 0x0102, pt.x, pt.y, 0, hwndMenu, nil)
+    user32.PostMessageA(hwndMenu, 0, 0, 0)
+    user32.DestroyMenu(hMenu)
+    
+    if cmd == 1001 then
+        if not Tray.showSpecificWindow("Settings") then
+            Tray.spawnProcess('love . settings')
+        end
+    elseif cmd == 1002 then
+        config.shouldExit = 1 -- Signal the main process to exit (shared memory)
+    end
+end
+
+function Tray.init(windowTitle, config, noIcon)
+    hwnd = user32.FindWindowA(nil, windowTitle)
+    if not hwnd then return end
 
     if not noIcon then
         nid = ffi.new("NOTIFYICONDATA")
@@ -135,41 +163,14 @@ function Tray.init(windowTitle, onSettings, onExit, noIcon, config)
         nid.uCallbackMessage = TRAY_CALLBACK
         nid.hIcon = user32.LoadIconA(nil, ffi.cast("const char*", 32512)) -- IDI_APPLICATION
         ffi.copy(nid.szTip, "Beating Heart", 14)
-
         shell32.Shell_NotifyIconA(0, nid) -- NIM_ADD
 
         wndProcCallback = ffi.cast("WNDPROC", function(h, msg, w, l)
             if msg == TRAY_CALLBACK then
                 local mouseMsg = tonumber(l)
                 if mouseMsg == WM_RBUTTONUP then
-                    local pt = ffi.new("POINT")
-                    user32.GetCursorPos(pt)
-                    
-                    user32.SetForegroundWindow(hwnd)
-                    local hMenu = user32.CreatePopupMenu()
-                    
-                    local function utf8_to_utf16(str)
-                        local len = kernel32.MultiByteToWideChar(65001, 0, str, -1, nil, 0)
-                        local buf = ffi.new("wchar_t[?]", len)
-                        kernel32.MultiByteToWideChar(65001, 0, str, -1, buf, len)
-                        return buf
-                    end
-                    
-                    local langID = memConfig and memConfig.language or 0
-                    user32.InsertMenuW(hMenu, 0, 0x00000000, 1001, utf8_to_utf16(i18n.get("tray_settings", langID)))
-                    user32.InsertMenuW(hMenu, 1, 0x00000800, 0, nil) -- SEPARATOR
-                    user32.InsertMenuW(hMenu, 2, 0x00000000, 1002, utf8_to_utf16(i18n.get("tray_exit", langID)))
-                    
-                    -- TPM_RETURNCMD=0x0100, TPM_RIGHTBUTTON=0x0002, TPM_BOTTOMALIGN=0x0020, TPM_NONOTIFY=0x0080
-                    local cmd = user32.TrackPopupMenu(hMenu, 0x01A2, pt.x, pt.y, 0, hwnd, nil)
-                    user32.PostMessageA(hwnd, 0, 0, 0)
-                    user32.DestroyMenu(hMenu)
-                    
-                    if cmd == 1001 and onSettingsCallback then
-                        onSettingsCallback()
-                    elseif cmd == 1002 and onExitCallback then
-                        onExitCallback()
-                    end
+                    -- NON-BLOCKING: Spawn the helper process to show the native menu
+                    Tray.spawnProcess('love . menu')
                 elseif mouseMsg == WM_LBUTTONUP then
                     Tray.restore()
                 end
@@ -177,33 +178,17 @@ function Tray.init(windowTitle, onSettings, onExit, noIcon, config)
             end
             return user32.CallWindowProcA(oldWndProc, h, msg, w, l)
         end)
-        
-        
         oldWndProc = ffi.cast("WNDPROC", user32.SetWindowLongPtrA(hwnd, GWLP_WNDPROC, ffi.cast("LONG_PTR", wndProcCallback)))
     end
 
-    -- Hook into modern Windows immersive Dark Mode for standard components (Popup Menus)
-    -- This relies on uxtheme.dll ordinals (135 = SetPreferredAppMode)
+    -- Hook Dark Mode
     pcall(function()
         local hTheme = kernel32.LoadLibraryA("uxtheme.dll")
         if hTheme ~= nil then
-            -- Ordinal 135: SetPreferredAppMode (1 = AllowDark => dynamically adapt to user OS theme)
             local setAppMode = kernel32.GetProcAddress(hTheme, ffi.cast("const char*", 135))
-            if setAppMode ~= nil then
-                ffi.cast("int (*)(int)", setAppMode)(1)
-            else
-                -- Fallback: Ordinal 133 AllowDarkModeForApp for Win10 1809
-                local allowDark = kernel32.GetProcAddress(hTheme, ffi.cast("const char*", 133))
-                if allowDark ~= nil then
-                    ffi.cast("int (*)(int)", allowDark)(1)
-                end
-            end
-            
-            -- Ordinal 136: FlushMenuThemes to re-render context menus using the new app mode
+            if setAppMode ~= nil then ffi.cast("int (*)(int)", setAppMode)(1) end
             local flushMenu = kernel32.GetProcAddress(hTheme, ffi.cast("const char*", 136))
-            if flushMenu ~= nil then
-                ffi.cast("void (*)()", flushMenu)()
-            end
+            if flushMenu ~= nil then ffi.cast("void (*)()", flushMenu)() end
         end
     end)
 end
@@ -219,7 +204,6 @@ function Tray.hideFromTaskbar()
     local GWL_EXSTYLE = -20
     local WS_EX_APPWINDOW = 0x00040000
     local WS_EX_TOOLWINDOW = 0x00000080
-    
     local oldEx = user32.GetWindowLongA(hwnd, GWL_EXSTYLE)
     oldEx = bit.band(oldEx, bit.bnot(WS_EX_APPWINDOW))
     oldEx = bit.bor(oldEx, WS_EX_TOOLWINDOW)
@@ -231,37 +215,22 @@ function Tray.setClickThrough(enable)
     local GWL_EXSTYLE = -20
     local WS_EX_TRANSPARENT = 0x00000020
     local WS_EX_LAYERED = 0x00080000
-    
     local oldEx = user32.GetWindowLongA(hwnd, GWL_EXSTYLE)
-    local newEx = oldEx
-    if enable then
-        newEx = bit.bor(oldEx, WS_EX_TRANSPARENT, WS_EX_LAYERED)
-    else
-        newEx = bit.band(oldEx, bit.bnot(WS_EX_TRANSPARENT))
-    end
-    
-    if oldEx ~= newEx then
-        user32.SetWindowLongPtrA(hwnd, GWL_EXSTYLE, ffi.cast("LONG_PTR", newEx))
-    end
+    local newEx = enable and bit.bor(oldEx, WS_EX_TRANSPARENT, WS_EX_LAYERED) or bit.band(oldEx, bit.bnot(WS_EX_TRANSPARENT))
+    if oldEx ~= newEx then user32.SetWindowLongPtrA(hwnd, GWL_EXSTYLE, ffi.cast("LONG_PTR", newEx)) end
 end
 
 function Tray.setTopmost(topmost)
     if not hwnd then return end
-    local HWND_TOPMOST = ffi.cast("HWND", -1)
-    local HWND_NOTOPMOST = ffi.cast("HWND", -2)
-    local SWP_NOMOVE = 0x0002
-    local SWP_NOSIZE = 0x0001
-    local insertAfter = topmost and HWND_TOPMOST or HWND_NOTOPMOST
-    user32.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, bit.bor(SWP_NOMOVE, SWP_NOSIZE))
+    local insertAfter = topmost and ffi.cast("HWND", -1) or ffi.cast("HWND", -2) -- HWND_TOPMOST or HWND_NOTOPMOST
+    user32.SetWindowPos(hwnd, insertAfter, 0, 0, 0, 0, 0x0003) -- SWP_NOMOVE | SWP_NOSIZE
 end
 
--- showMenu logic removed since Main loop orchestrates MMF UI spawning
-
 function Tray.showSpecificWindow(title)
-    local specificHwnd = user32.FindWindowA(nil, title)
-    if specificHwnd and ffi.cast("intptr_t", specificHwnd) ~= 0 then
-        user32.ShowWindow(specificHwnd, 5) -- SW_SHOW
-        user32.SetForegroundWindow(specificHwnd)
+    local h = user32.FindWindowA(nil, title)
+    if h and ffi.cast("intptr_t", h) ~= 0 then
+        user32.ShowWindow(h, 5) -- SW_SHOW
+        user32.SetForegroundWindow(h)
         return true
     end
     return false
@@ -276,28 +245,16 @@ function Tray.hide()
 end
 
 function Tray.restore()
-    if hwnd then
-        user32.ShowWindow(hwnd, 5)
-        user32.SetForegroundWindow(hwnd)
-    end
+    if hwnd then user32.ShowWindow(hwnd, 5); user32.SetForegroundWindow(hwnd) end
 end
 
 function Tray.getCursorPos()
-    local pt = ffi.new("POINT")
-    user32.GetCursorPos(pt)
-    return pt.x, pt.y
+    local pt = ffi.new("POINT"); user32.GetCursorPos(pt); return pt.x, pt.y
 end
 
 function Tray.cleanup()
-    if nid then
-        shell32.Shell_NotifyIconA(2, nid) -- NIM_DELETE
-    end
-    if hwnd and oldWndProc then
-        user32.SetWindowLongPtrA(hwnd, GWLP_WNDPROC, ffi.cast("LONG_PTR", oldWndProc))
-    end
-    if wndProcCallback then
-        wndProcCallback:free()
-    end
+    if nid then shell32.Shell_NotifyIconA(2, nid) end -- NIM_DELETE
+    if hwnd and oldWndProc then user32.SetWindowLongPtrA(hwnd, GWLP_WNDPROC, ffi.cast("LONG_PTR", oldWndProc)) end
 end
 
 return Tray

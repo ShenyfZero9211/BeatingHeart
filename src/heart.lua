@@ -5,7 +5,9 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     local a_color = (type(arousal) == "table") and arousal.color or (arousal or 0)
     local a_speed = (type(arousal) == "table") and arousal.speed or (arousal or 0)
     local a_scale = (type(arousal) == "table") and arousal.scale or (arousal or 0)
-    local a_motion = (type(arousal) == "table") and arousal.motion or (arousal or 0)
+    local a_sway = (type(arousal) == "table") and arousal.sway or (arousal or 0)
+    local floatX = (type(arousal) == "table") and arousal.floatX or 0
+    local floatY = (type(arousal) == "table") and arousal.floatY or 0
 
     beatPhase = beatPhase or 0.0
     excitationMomentum = excitationMomentum or 0.0
@@ -41,15 +43,12 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     
     love.graphics.push()
     
-    -- 2. 空间律动 (Motion)
-    local t = love.timer.getTime()
-    local aMotionFactor = a_motion * a_motion * a_motion -- 三阶映射增加位移平稳感
-    local floatSpeed = 0.5 + aMotionFactor * 0.5
-    local floatX = math.sin(t * 0.7 * floatSpeed) * (2 + lowFactor * 12 + aMotionFactor * 35)
-    local floatY = math.cos(t * 0.5 * floatSpeed) * (3 + lowFactor * 12 + aMotionFactor * 35)
+    -- 2. 空间位移 (Sway Drift - SYNCED with Hit-Test)
     love.graphics.translate(x + floatX, y + floatY)
     
     -- ===== 仿生感知维度 (Bionic Sensing Layers) =====
+    local t = love.timer.getTime()
+    local aSwayFactor = a_sway * a_sway
     
     -- 3. [SOOTHE JITTER] 生理震颤平滑化
     -- 大幅削弱 hiFactor 的尖锐权重，增加时间低通滤镜感
@@ -64,21 +63,23 @@ function Heart.draw(x, y, size, color, lowFactor, midFactor, hiFactor, arousal, 
     end
 
     -- 4. 旋转与重心偏转 (Inertia Sway)
-    local rotAngle = math.sin(beatPhase * 0.5) * (0.15 * aMotionFactor)
+    -- 主旋转使用 aSwayFactor 产生缓慢堆叠的“重力感”摆动
+    local rotAngle = math.sin(beatPhase * 0.5) * (0.12 * aSwayFactor)
     if beatPulse > 0.1 then
-        rotAngle = rotAngle + math.sin(t * 25) * (beatPulse * 0.2)
+        rotAngle = rotAngle + math.sin(t * 25) * (beatPulse * 0.15)
     end
     -- 持续性重心漂移
-    rotAngle = rotAngle + math.sin(t * 2.5) * (aMotionFactor * 0.2)
+    rotAngle = rotAngle + math.sin(t * 1.8) * (aSwayFactor * 0.25)
     love.graphics.rotate(rotAngle)
     
     -- 5. [ORGANIC DISTORTION] 非等比例有机形变
     -- 正常状态下是等比。兴奋积压久了会产生纵向拉伸与横向挤压的呼吸感
-    local squash = excitationMomentum * 0.12 * math.sin(beatPhase)
-    local stretch = excitationMomentum * 0.15 * math.cos(beatPhase)
+    local bassThump = lowFactor * 0.5 -- 强化低频冲击感
+    local squash = (excitationMomentum * 0.12 + bassThump * 0.15) * math.sin(beatPhase)
+    local stretch = (excitationMomentum * 0.15 + bassThump * 0.1) * math.cos(beatPhase)
     
-    love.graphics.scale(1 + (a_speed * 0.1) + (beatPulse * 0.12) + squash, 
-                        1 - (a_speed * 0.05) + stretch)
+    love.graphics.scale(1 + (a_speed * 0.1) + (beatPulse * 0.12) + bassThump + squash, 
+                        1 - (a_speed * 0.05) - (bassThump * 0.2) + stretch)
     
     -- 6. 色彩与光感渲染 (Color Response)
     local r, g, b, a = unpack(color)

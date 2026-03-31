@@ -40,6 +40,12 @@ ffi.cdef[[
         double color_a;
         double posX;
         double posY;
+        double winW;
+        double winH;
+        double floatX;
+        double floatY;
+        double pulseScale;
+        double dpiScale;
         double shouldExit;
         double menuX;
         double menuY;

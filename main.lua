@@ -11,7 +11,6 @@ local sensoryGate = 0.1
 local arousalBuffer = 0.0
 local arousalSway = 0.0
 local heartFloatX, heartFloatY = 0, 0
-local debugHitX, debugHitY, debugHitR = 0, 0, 0 -- [DEBUG]
 local lastClickThrough = nil -- [OPTIMIZE]
 
 -- Physics State for Heart organic animation
@@ -97,7 +96,6 @@ function love.load(args)
         love.window.setPosition(memConfig.posX, memConfig.posY)
         
         -- Default startup state
-        Tray.setClickThrough(true)
         Tray.setTopmost(memConfig.isTopmost == 1)
         lastTopmost = memConfig.isTopmost
     end
@@ -197,35 +195,16 @@ function love.update(dt)
         heartFloatX = math.sin(t * 0.7 * floatSpeed) * (2 + lowF * 10 + aSwayFactor * 40)
         heartFloatY = math.cos(t * 0.5 * floatSpeed) * (3 + lowF * 10 + aSwayFactor * 40)
 
-        -- [DPI FIX] 考虑到高分屏缩放，将系统坐标转换为逻辑坐标
-        local dpiScale = love.window.getDPIScale()
-        local wx, wy = love.window.getPosition()
-        local mx, my = Tray.getCursorPos()
         local winW, winH = love.graphics.getDimensions()
+        local dpiScale = love.window.getDPIScale()
+
+        -- [SYNC FOR NATIVE HIT-TEST] 将实时坐标同步到共享内存，供原生消息钩子读取
+        memConfig.winW, memConfig.winH = winW, winH
+        memConfig.floatX, memConfig.floatY = heartFloatX, heartFloatY
+        memConfig.pulseScale = 1.0 + currentScale * 0.4
+        memConfig.dpiScale = dpiScale
         
-        local localX = (mx - wx) / dpiScale
-        local localY = (my - wy) / dpiScale
-        
-        -- 核心：判定圆心随心脏位移同步偏移
-        local centerX, centerY = winW/2 + heartFloatX, winH/2 + heartFloatY
-        local dist2 = (localX - centerX)^2 + (localY - centerY)^2
-        
-        -- [DEBUG] 存入全局变量供绘制
-        debugHitX, debugHitY = centerX, centerY
-        
-        -- 核心：判定半径计入实时跳动缩放(currentScale)，并增加 20% 缓冲区
-        local pulseScale = 1.0 + currentScale * 0.4
-        local hitRadius = memConfig.size * pulseScale * 1.2
-        debugHitR = hitRadius -- [DEBUG]
-        
-        local isHit = (dist2 <= hitRadius^2) or draggingWindow
-        local targetClickThrough = not isHit
-        
-        -- [OPTIMIZE] 仅在状态改变时调用 API，减少系统开销
-        if targetClickThrough ~= lastClickThrough then
-            Tray.setClickThrough(targetClickThrough)
-            lastClickThrough = targetClickThrough
-        end
+        -- [MOMENTUM SWAY] 动能累加逻辑：积累慢(0.3)，衰减更慢(0.15)
         
         if arousal > 0.75 then
             excitationMomentum = math.min(1.0, excitationMomentum + dt * 0.06)
@@ -269,13 +248,6 @@ function love.draw()
         
         Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, Audio.getBeatPulse(), excitationMomentum)
         Bubble.draw(w/2, h/2)
-
-        -- [DEBUG] 绘制拖拽判定区域
-        love.graphics.setColor(0, 1, 0, 0.4)
-        love.graphics.setLineWidth(2)
-        love.graphics.circle("line", debugHitX, debugHitY, debugHitR)
-        love.graphics.setColor(0, 1, 0, 0.05)
-        love.graphics.circle("fill", debugHitX, debugHitY, debugHitR)
     end
 end
 

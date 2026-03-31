@@ -96,11 +96,14 @@ local NIF_MESSAGE = 0x1
 local NIF_ICON = 0x2
 local NIF_TIP = 0x4
 local WM_USER = 0x0400
-local TRAY_CALLBACK = WM_USER + 101
-
 local WM_LBUTTONUP = 0x0202
 local WM_RBUTTONUP = 0x0205
+local TRAY_CALLBACK = WM_USER + 101
 local GWLP_WNDPROC = -4
+
+local WM_NCHITTEST = 0x0084
+local HTTRANSPARENT = -1
+local HTCLIENT = 1
 
 local hwnd = nil
 local nid = nil
@@ -164,22 +167,53 @@ function Tray.init(windowTitle, config, noIcon)
         nid.hIcon = user32.LoadIconA(nil, ffi.cast("const char*", 32512)) -- IDI_APPLICATION
         ffi.copy(nid.szTip, "Beating Heart", 14)
         shell32.Shell_NotifyIconA(0, nid) -- NIM_ADD
-
-        wndProcCallback = ffi.cast("WNDPROC", function(h, msg, w, l)
-            if msg == TRAY_CALLBACK then
-                local mouseMsg = tonumber(l)
-                if mouseMsg == WM_RBUTTONUP then
-                    -- NON-BLOCKING: Spawn the helper process to show the native menu
-                    Tray.spawnProcess('love . menu')
-                elseif mouseMsg == WM_LBUTTONUP then
-                    Tray.restore()
-                end
-                return 0
-            end
-            return user32.CallWindowProcA(oldWndProc, h, msg, w, l)
-        end)
-        oldWndProc = ffi.cast("WNDPROC", user32.SetWindowLongPtrA(hwnd, GWLP_WNDPROC, ffi.cast("LONG_PTR", wndProcCallback)))
     end
+
+    -- [ZERO-LATENCY HITTEST] 全局注册 WNDPROC 钩子
+    local isMainHeart = (windowTitle == "Beating Heart")
+    wndProcCallback = ffi.cast("WNDPROC", function(h, msg, w, l)
+        -- 1. 处理系统穿透判定 (仅对主心脏窗口生效)
+        if msg == WM_NCHITTEST then
+            if not isMainHeart then return HTCLIENT end
+            
+            if config then
+                local x = tonumber(bit.band(l, 0xFFFF))
+            -- 处理负坐标 (多显示器支持)
+            if x >= 32768 then x = x - 65536 end
+            local y = tonumber(bit.rshift(l, 16))
+            if y >= 32768 then y = y - 65536 end
+            
+            -- [NATIVE SYNC] 从共享内存读取实时坐标与缩放
+            local dpiScale = config.dpiScale or 1.0
+            local localX = (x - config.posX) / dpiScale
+            local localY = (y - config.posY) / dpiScale
+            
+            local centerX = config.winW / 2 + config.floatX
+            local centerY = config.winH / 2 + config.floatY
+            local dist2 = (localX - centerX)^2 + (localY - centerY)^2
+            
+                local hitR = config.size * config.pulseScale * 1.2
+                if dist2 <= hitR^2 then
+                    return HTCLIENT -- 命中：拦截点击供 Lua 使用
+                else
+                    return HTTRANSPARENT -- 穿透：把点击扔给正下方的窗口
+                end
+            end
+        end
+
+        -- 2. 处理托盘回调
+        if msg == TRAY_CALLBACK then
+            local mouseMsg = tonumber(l)
+            if mouseMsg == WM_RBUTTONUP then
+                Tray.spawnProcess('love . menu')
+            elseif mouseMsg == WM_LBUTTONUP then
+                Tray.restore()
+            end
+            return 0
+        end
+        return user32.CallWindowProcA(oldWndProc, h, msg, w, l)
+    end)
+    oldWndProc = ffi.cast("WNDPROC", user32.SetWindowLongPtrA(hwnd, GWLP_WNDPROC, ffi.cast("LONG_PTR", wndProcCallback)))
 
     -- Hook Dark Mode
     pcall(function()

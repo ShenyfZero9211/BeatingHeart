@@ -11,6 +11,8 @@ local sensoryGate = 0.1
 local arousalBuffer = 0.0
 local arousalSway = 0.0
 local heartFloatX, heartFloatY = 0, 0
+local debugHitX, debugHitY, debugHitR = 0, 0, 0 -- [DEBUG]
+local lastClickThrough = nil -- [OPTIMIZE]
 
 -- Physics State for Heart organic animation
 local currentScale = 0
@@ -195,23 +197,34 @@ function love.update(dt)
         heartFloatX = math.sin(t * 0.7 * floatSpeed) * (2 + lowF * 10 + aSwayFactor * 40)
         heartFloatY = math.cos(t * 0.5 * floatSpeed) * (3 + lowF * 10 + aSwayFactor * 40)
 
-        -- Hit-Testing for click-through (同步缩放与位移)
+        -- [DPI FIX] 考虑到高分屏缩放，将系统坐标转换为逻辑坐标
+        local dpiScale = love.window.getDPIScale()
         local wx, wy = love.window.getPosition()
         local mx, my = Tray.getCursorPos()
         local winW, winH = love.graphics.getDimensions()
         
+        local localX = (mx - wx) / dpiScale
+        local localY = (my - wy) / dpiScale
+        
         -- 核心：判定圆心随心脏位移同步偏移
         local centerX, centerY = winW/2 + heartFloatX, winH/2 + heartFloatY
-        local dist2 = (mx - wx - centerX)^2 + (my - wy - centerY)^2
+        local dist2 = (localX - centerX)^2 + (localY - centerY)^2
+        
+        -- [DEBUG] 存入全局变量供绘制
+        debugHitX, debugHitY = centerX, centerY
         
         -- 核心：判定半径计入实时跳动缩放(currentScale)，并增加 20% 缓冲区
         local pulseScale = 1.0 + currentScale * 0.4
         local hitRadius = memConfig.size * pulseScale * 1.2
+        debugHitR = hitRadius -- [DEBUG]
         
-        if dist2 > hitRadius^2 and not draggingWindow then
-            Tray.setClickThrough(true)
-        else
-            Tray.setClickThrough(false)
+        local isHit = (dist2 <= hitRadius^2) or draggingWindow
+        local targetClickThrough = not isHit
+        
+        -- [OPTIMIZE] 仅在状态改变时调用 API，减少系统开销
+        if targetClickThrough ~= lastClickThrough then
+            Tray.setClickThrough(targetClickThrough)
+            lastClickThrough = targetClickThrough
         end
         
         if arousal > 0.75 then
@@ -256,6 +269,13 @@ function love.draw()
         
         Heart.draw(w/2, h/2, memConfig.size, {r, g, b, memConfig.color_a}, currentScale + (lowF*0.5), midF, hiF, arousalTable, beatPhase, Audio.getBeatPulse(), excitationMomentum)
         Bubble.draw(w/2, h/2)
+
+        -- [DEBUG] 绘制拖拽判定区域
+        love.graphics.setColor(0, 1, 0, 0.4)
+        love.graphics.setLineWidth(2)
+        love.graphics.circle("line", debugHitX, debugHitY, debugHitR)
+        love.graphics.setColor(0, 1, 0, 0.05)
+        love.graphics.circle("fill", debugHitX, debugHitY, debugHitR)
     end
 end
 
